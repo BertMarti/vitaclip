@@ -1,0 +1,42 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "delegado": {
+      "mode": "primary",
+      "description": "Implementa tareas cerradas de Vitaclip en su worktree siguiendo AGENTS.md",
+      "permission": {
+        "*": "deny",
+        "read": "allow",
+        "edit": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "lsp": "allow",
+        "webfetch": "allow",
+        "external_directory": "deny",
+        "bash": {
+          "*": "deny",
+          "ls *": "allow",
+          "cat *": "allow",
+          "head *": "allow",
+          "tail *": "allow",
+          "wc *": "allow",
+          "grep *": "allow",
+          "find *": "allow",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "node --check *": "allow",
+          "node --test*": "allow",
+          "npm test*": "allow",
+          "npm run check*": "allow",
+          "cargo check*": "allow",
+          "cargo test*": "allow",
+          "cargo clippy*": "allow",
+          "cargo fmt*": "allow",
+          "cd src-tauri && cargo *": "allow"
+        }
+      }
+    }
+  }
+}

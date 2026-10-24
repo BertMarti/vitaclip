@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Lo mínimo para el popup y los ajustes: eventos y ocultar o cerrar la ventana.",
+  "windows": ["popup", "ajustes"],
+  "permissions": [
+    "core:event:default",
+    "core:window:allow-hide",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-start-dragging"
+  ]
+}
