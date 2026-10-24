@@ -24,10 +24,17 @@ fn ajustes_desde(e: &Estado) -> Result<db::Ajustes, String> {
         .unwrap_or_default())
 }
 fn enmascarar(mut a: db::Ajustes) -> db::Ajustes {
-    if a.ia.clave.len() > 4 {
-        a.ia.clave = format!("••••{}", &a.ia.clave[a.ia.clave.len() - 4..]);
-    } else {
-        a.ia.clave.clear();
+    // Por caracteres (no bytes) para no partir caracteres multibyte; una clave corta se enmascara entera.
+    let caracteres: Vec<char> = a.ia.clave.chars().collect();
+    if !caracteres.is_empty() {
+        let fin: String = caracteres[caracteres.len().saturating_sub(4)..]
+            .iter()
+            .collect();
+        a.ia.clave = if caracteres.len() > 4 {
+            format!("••••{fin}")
+        } else {
+            "••••".into()
+        };
     }
     a
 }
@@ -452,6 +459,6 @@ pub fn ventana_ocultar(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 #[tauri::command]
-pub fn ajustes_abrir(app: AppHandle, bienvenida: bool) -> Result<(), String> {
-    atajo::abrir_ajustes(&app, bienvenida)
+pub fn ajustes_abrir(app: AppHandle, bienvenida: Option<bool>) -> Result<(), String> {
+    atajo::abrir_ajustes(&app, bienvenida.unwrap_or(false))
 }
