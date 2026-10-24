@@ -1,6 +1,6 @@
 # Vitaclip: diseño (2026-10-24)
 
-> El portapapeles supervitaminado. Un atajo (`Ctrl+Shift+Ñ` por defecto) abre una ventanita como la de Ditto, pero con herramientas
+> El portapapeles supervitaminado. Un atajo de teclado **que elige el propio usuario** abre una ventanita como la de Ditto, pero con herramientas
 > útiles para el día a día. Gratis y de código abierto; las funciones «Pro» se activan con una licencia (sin pasarela de pago por ahora).
 
 ## 1. Qué pidió Alberto y qué se ha supuesto
@@ -54,8 +54,12 @@ dos segundos, transformarlo y pegarlo sin tocar el ratón.
 8. **Generadores**: UUID v4, contraseña segura (longitud configurable), fecha ISO, marca de tiempo Unix, lorem ipsum.
 9. **Colores**: si un clip es un color (`#1e90ff`, `rgb(…)`, `hsl(…)`), se ve la muestra y se puede pegar en HEX, RGB o HSL.
 10. **Código QR** del elemento (se ve en el popup; se puede copiar como imagen).
-11. **Ajustes**: atajo (se graba pulsándolo), tema (sistema/claro/oscuro), idioma, pegar automáticamente sí/no, arrancar con el sistema,
+11. **Ajustes**: atajo totalmente personalizable (se graba pulsando la combinación que quieras; no hay ninguno impuesto), tema (sistema/claro/oscuro), idioma, pegar automáticamente sí/no, arrancar con el sistema,
     pausar la captura, patrones a ignorar (expresiones regulares; por defecto se ignoran cosas con pinta de tarjeta o de token), exportar e importar el historial en JSON.
+
+12. **Bienvenida**: la primera vez se abren los ajustes en la sección Atajo con el mensaje «Elige el atajo que abrirá Vitaclip»; mientras
+    no elijas, funciona la sugerencia `Ctrl+Alt+V` (`Cmd+Option+V` en Mac). También se explica cómo usar el comando `vitaclip --mostrar`
+    desde un atajo del propio sistema (imprescindible en Wayland).
 
 ### Pro (licencia)
 1. **IA en el portapapeles**: traducir (es↔en y otros), resumir, corregir ortografía, reescribir más formal o más cercano, explicar código

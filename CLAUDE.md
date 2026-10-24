@@ -4,7 +4,7 @@ Instrucciones para Claude Code en este repositorio (Vitaclip).
 
 ## Qué es
 Vitaclip, «el portapapeles supervitaminado»: aplicación de escritorio (Tauri v2) para Windows, macOS y Linux. Un atajo global
-(`Ctrl+Shift+Ñ` por defecto, configurable) abre un popup con el historial del portapapeles, fragmentos, transformaciones de texto,
+que elige el usuario en Ajustes (sugerencia inicial `Ctrl+Alt+V`; ninguno impuesto) abre un popup con el historial del portapapeles, fragmentos, transformaciones de texto,
 calculadora, generadores, colores y QR. Funciones Pro con licencia Ed25519 sin conexión (IA, bóveda cifrada, acciones, plantillas con
 campos, historial ilimitado). Diseño completo: `docs/specs/2026-10-24-vitaclip-diseno.md`.
 

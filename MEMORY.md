@@ -7,8 +7,10 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - **Tauri v2 y no Electron:** instaladores de ~10 MB en lugar de ~100 MB, atajos globales y bandeja oficiales, compilación gratis en
   GitHub Actions para Windows, macOS (Intel y Apple Silicon) y Linux (x64 y arm64). Se descartó Tauri 3 (aún en alfa).
 - **Interfaz sin paso de build** (como ARIA): módulos ES nativos, CSP estricta, `el()` + `textContent`.
-- **Atajo por defecto `CommandOrControl+Shift+Semicolon`:** en un teclado español la tecla física «Semicolon» es la Ñ, así que es
-  Ctrl+Shift+Ñ (Cmd+Shift+Ñ en Mac). Los atajos se guardan por tecla física (`event.code`), así funcionan con cualquier distribución.
+- **Atajo elegido por el usuario (Alberto, 24/10):** no se impone ninguno; Ctrl+Shift+Ñ era solo un ejemplo. La primera vez se abren los
+  ajustes en «Atajo» para grabarlo; mientras tanto vale la sugerencia `CommandOrControl+Alt+KeyV` (Ctrl+Alt+V / Cmd+Option+V), elegida
+  porque no choca con atajos habituales (Ctrl+Shift+V es «pegar sin formato» en navegadores y terminales). Se guardan por tecla física
+  (`event.code`), así funcionan con cualquier distribución de teclado. Alternativa para Wayland: atajo del sistema → `vitaclip --mostrar`.
 - **Portapapeles con `arboard` y sondeo cada 400 ms:** no hay evento común en los 3 sistemas. Un único `Clipboard` vive en el estado
   porque en X11 lo copiado desaparece al soltar el objeto.
 - **Pegar con `enigo`** simulando Ctrl/Cmd+V tras ocultar el popup (120 ms). En Wayland puede fallar: queda copiado y se avisa.
