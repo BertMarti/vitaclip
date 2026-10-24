@@ -56,7 +56,9 @@ pub fn descifrar(clave: &[u8; 32], datos: &[u8]) -> Result<Zeroizing<Vec<u8>>, S
 /// Crea una bóveda nueva: devuelve la cabecera a guardar y la clave ya abierta.
 pub fn crear(contrasena: &str) -> Result<(Cabecera, Clave), String> {
     if contrasena.chars().count() < MINIMO_CONTRASENA {
-        return Err(format!("La contraseña maestra debe tener al menos {MINIMO_CONTRASENA} caracteres."));
+        return Err(format!(
+            "La contraseña maestra debe tener al menos {MINIMO_CONTRASENA} caracteres."
+        ));
     }
     let mut sal = vec![0u8; 16];
     OsRng.fill_bytes(&mut sal);
@@ -125,7 +127,10 @@ mod pruebas {
         let (cab, clave) = crear("correcto-caballo").unwrap();
         let datos = cifrar(&clave, "mi secreto 🔐".as_bytes()).unwrap();
         let reabierta = abrir(&cab, "correcto-caballo").unwrap();
-        assert_eq!(descifrar(&reabierta, &datos).unwrap().as_slice(), "mi secreto 🔐".as_bytes());
+        assert_eq!(
+            descifrar(&reabierta, &datos).unwrap().as_slice(),
+            "mi secreto 🔐".as_bytes()
+        );
     }
 
     #[test]
@@ -156,7 +161,9 @@ mod pruebas {
         assert!(b.clave_en(inicio + Duration::from_secs(60)).is_some());
         // El uso renueva el plazo: 4 min después del último uso sigue abierta.
         assert!(b.clave_en(inicio + Duration::from_secs(60 + 240)).is_some());
-        assert!(b.clave_en(inicio + Duration::from_secs(60 + 240 + 301)).is_none());
+        assert!(b
+            .clave_en(inicio + Duration::from_secs(60 + 240 + 301))
+            .is_none());
         assert!(!b.abierta());
     }
 }

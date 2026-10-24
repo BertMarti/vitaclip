@@ -1,0 +1,544 @@
+use rusqlite::{params, Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::path::Path;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Clip {
+    pub id: i64,
+    pub tipo: String,
+    pub texto: String,
+    pub ancho: Option<i64>,
+    pub alto: Option<i64>,
+    pub creado: i64,
+    pub usado: i64,
+    pub usos: i64,
+    pub fijado: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Fragmento {
+    pub id: i64,
+    pub nombre: String,
+    pub abreviatura: String,
+    pub contenido: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Accion {
+    pub id: i64,
+    pub nombre: String,
+    pub pasos: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntradaBoveda {
+    pub id: i64,
+    pub titulo: String,
+    pub creado: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ConfigIa {
+    pub proveedor: String,
+    pub url: String,
+    pub modelo: String,
+    pub clave: String,
+}
+
+impl Default for ConfigIa {
+    fn default() -> Self {
+        Self {
+            proveedor: "ollama".into(),
+            url: "http://localhost:11434/v1".into(),
+            modelo: "llama3.2".into(),
+            clave: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Ajustes {
+    pub atajo: String,
+    pub tema: String,
+    pub idioma: String,
+    pub pegar_auto: bool,
+    pub arrancar_con_sistema: bool,
+    pub pausado: bool,
+    pub limite_historial: u32,
+    pub ignorar: Vec<String>,
+    pub ia: ConfigIa,
+}
+
+impl Default for Ajustes {
+    fn default() -> Self {
+        Self {
+            atajo: "CommandOrControl+Alt+KeyV".into(),
+            tema: "sistema".into(),
+            idioma: "es".into(),
+            pegar_auto: true,
+            arrancar_con_sistema: false,
+            pausado: false,
+            limite_historial: 300,
+            ignorar: vec![
+                r"^(?:\d[ -]?){13,19}$".into(),
+                r"^(ghp_|github_pat_|sk-|xox[abp]-|AKIA)[A-Za-z0-9_\-]{8,}".into(),
+            ],
+            ia: ConfigIa::default(),
+        }
+    }
+}
+
+pub fn abrir(ruta: &Path) -> Result<Connection, String> {
+    let conexion = Connection::open(ruta).map_err(|e| e.to_string())?;
+    inicializar(&conexion)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(ruta, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(conexion)
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn abrir_memoria() -> Result<Connection, String> {
+    let conexion = Connection::open_in_memory().map_err(|e| e.to_string())?;
+    inicializar(&conexion)?;
+    Ok(conexion)
+}
+
+fn inicializar(c: &Connection) -> Result<(), String> {
+    c.execute_batch(
+        "PRAGMA journal_mode=WAL;
+         CREATE TABLE IF NOT EXISTS clips(
+           id INTEGER PRIMARY KEY, tipo TEXT NOT NULL, texto TEXT NOT NULL DEFAULT '',
+           imagen BLOB, ancho INTEGER, alto INTEGER, huella TEXT NOT NULL UNIQUE,
+           creado INTEGER NOT NULL, usado INTEGER NOT NULL, usos INTEGER NOT NULL DEFAULT 0,
+           fijado INTEGER NOT NULL DEFAULT 0);
+         CREATE TABLE IF NOT EXISTS fragmentos(
+           id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, abreviatura TEXT NOT NULL DEFAULT '',
+           contenido TEXT NOT NULL);
+         CREATE TABLE IF NOT EXISTS acciones(id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, pasos TEXT NOT NULL);
+         CREATE TABLE IF NOT EXISTS boveda(id INTEGER PRIMARY KEY, titulo TEXT NOT NULL, secreto BLOB NOT NULL, creado INTEGER NOT NULL);
+         CREATE TABLE IF NOT EXISTS ajustes(clave TEXT PRIMARY KEY, valor TEXT NOT NULL);",
+    )
+    .map_err(|e| e.to_string())
+}
+
+pub fn huella(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+fn recortar(c: &Connection, limite: u32) -> Result<(), String> {
+    c.execute(
+        "DELETE FROM clips WHERE id IN (
+           SELECT id FROM clips WHERE fijado=0 ORDER BY usado ASC
+           LIMIT MAX(0, (SELECT COUNT(*) FROM clips WHERE fijado=0)-?1))",
+        params![i64::from(limite)],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+pub fn guardar_texto(c: &Connection, texto: &str, ahora: i64, limite: u32) -> Result<bool, String> {
+    let h = huella(texto.as_bytes());
+    if c.execute(
+        "UPDATE clips SET usado=?1, usos=usos+1 WHERE huella=?2",
+        params![ahora, h],
+    )
+    .map_err(|e| e.to_string())?
+        > 0
+    {
+        return Ok(false);
+    }
+    c.execute(
+        "INSERT INTO clips(tipo,texto,huella,creado,usado) VALUES('texto',?1,?2,?3,?3)",
+        params![texto, h, ahora],
+    )
+    .map_err(|e| e.to_string())?;
+    recortar(c, limite)?;
+    Ok(true)
+}
+
+pub fn guardar_imagen(
+    c: &Connection,
+    png: &[u8],
+    ancho: u32,
+    alto: u32,
+    ahora: i64,
+    limite: u32,
+) -> Result<bool, String> {
+    let h = huella(png);
+    if c.execute(
+        "UPDATE clips SET usado=?1, usos=usos+1 WHERE huella=?2",
+        params![ahora, h],
+    )
+    .map_err(|e| e.to_string())?
+        > 0
+    {
+        return Ok(false);
+    }
+    c.execute(
+        "INSERT INTO clips(tipo,imagen,ancho,alto,huella,creado,usado) VALUES('imagen',?1,?2,?3,?4,?5,?5)",
+        params![png, i64::from(ancho), i64::from(alto), h, ahora],
+    )
+    .map_err(|e| e.to_string())?;
+    recortar(c, limite)?;
+    Ok(true)
+}
+
+fn escapar_like(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
+pub fn listar(c: &Connection, consulta: &str, limite: u32) -> Result<Vec<Clip>, String> {
+    let (filtro, terminos) = if let Some(x) = consulta.strip_prefix("img:") {
+        (" AND tipo='imagen'", x)
+    } else if let Some(x) = consulta.strip_prefix("url:") {
+        (
+            " AND tipo='texto' AND (texto LIKE 'http://%' OR texto LIKE 'https://%')",
+            x,
+        )
+    } else if let Some(x) = consulta.strip_prefix("fij:") {
+        (" AND fijado=1", x)
+    } else {
+        ("", consulta)
+    };
+    let palabras: Vec<String> = terminos.split_whitespace().map(escapar_like).collect();
+    let mut sql =
+        "SELECT id,tipo,texto,ancho,alto,creado,usado,usos,fijado FROM clips WHERE 1=1".to_string();
+    sql.push_str(filtro);
+    for _ in &palabras {
+        sql.push_str(" AND lower(texto) LIKE lower(?) ESCAPE '\\'");
+    }
+    sql.push_str(" ORDER BY fijado DESC, usado DESC LIMIT ?");
+    let mut valores: Vec<Box<dyn rusqlite::ToSql>> = palabras
+        .iter()
+        .map(|p| Box::new(format!("%{}%", p)) as Box<dyn rusqlite::ToSql>)
+        .collect();
+    valores.push(Box::new(i64::from(limite)));
+    let mut stmt = c.prepare(&sql).map_err(|e| e.to_string())?;
+    let filas = stmt
+        .query_map(rusqlite::params_from_iter(valores.iter()), |r| {
+            Ok(Clip {
+                id: r.get(0)?,
+                tipo: r.get(1)?,
+                texto: r.get(2)?,
+                ancho: r.get(3)?,
+                alto: r.get(4)?,
+                creado: r.get(5)?,
+                usado: r.get(6)?,
+                usos: r.get(7)?,
+                fijado: r.get::<_, i64>(8)? != 0,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    filas
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
+pub fn imagen_png(c: &Connection, id: i64) -> Result<Option<Vec<u8>>, String> {
+    c.query_row("SELECT imagen FROM clips WHERE id=?", [id], |r| r.get(0))
+        .optional()
+        .map_err(|e| e.to_string())
+}
+
+pub fn marcar_usado(c: &Connection, id: i64, ahora: i64) -> Result<(), String> {
+    c.execute(
+        "UPDATE clips SET usado=?, usos=usos+1 WHERE id=?",
+        params![ahora, id],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+pub fn id_por_huella(c: &Connection, h: &str) -> Result<Option<i64>, String> {
+    c.query_row("SELECT id FROM clips WHERE huella=?", [h], |r| r.get(0))
+        .optional()
+        .map_err(|e| e.to_string())
+}
+pub fn fijar(c: &Connection, id: i64, valor: bool) -> Result<(), String> {
+    c.execute(
+        "UPDATE clips SET fijado=? WHERE id=?",
+        params![valor as i64, id],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+pub fn borrar(c: &Connection, id: i64) -> Result<(), String> {
+    c.execute("DELETE FROM clips WHERE id=?", [id])
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+pub fn vaciar(c: &Connection, incluir_fijados: bool) -> Result<(), String> {
+    c.execute(
+        if incluir_fijados {
+            "DELETE FROM clips"
+        } else {
+            "DELETE FROM clips WHERE fijado=0"
+        },
+        [],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+pub fn ajuste_leer(c: &Connection, clave: &str) -> Result<Option<String>, String> {
+    c.query_row("SELECT valor FROM ajustes WHERE clave=?", [clave], |r| {
+        r.get(0)
+    })
+    .optional()
+    .map_err(|e| e.to_string())
+}
+pub fn ajuste_guardar(c: &Connection, clave: &str, valor: &str) -> Result<(), String> {
+    c.execute(
+        "INSERT INTO ajustes(clave,valor) VALUES(?,?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
+        params![clave, valor],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+pub fn fragmentos(c: &Connection) -> Result<Vec<Fragmento>, String> {
+    let mut s = c
+        .prepare("SELECT id,nombre,abreviatura,contenido FROM fragmentos ORDER BY id")
+        .map_err(|e| e.to_string())?;
+    let filas = s
+        .query_map([], |r| {
+            Ok(Fragmento {
+                id: r.get(0)?,
+                nombre: r.get(1)?,
+                abreviatura: r.get(2)?,
+                contenido: r.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string());
+    filas
+}
+pub fn fragmento_guardar(c: &Connection, x: &Fragmento) -> Result<Fragmento, String> {
+    let id = if x.id == 0 {
+        c.execute(
+            "INSERT INTO fragmentos(nombre,abreviatura,contenido) VALUES(?,?,?)",
+            params![x.nombre, x.abreviatura, x.contenido],
+        )
+        .map_err(|e| e.to_string())?;
+        c.last_insert_rowid()
+    } else {
+        c.execute(
+            "UPDATE fragmentos SET nombre=?,abreviatura=?,contenido=? WHERE id=?",
+            params![x.nombre, x.abreviatura, x.contenido, x.id],
+        )
+        .map_err(|e| e.to_string())?;
+        x.id
+    };
+    Ok(Fragmento { id, ..x.clone() })
+}
+pub fn fragmento_borrar(c: &Connection, id: i64) -> Result<(), String> {
+    c.execute("DELETE FROM fragmentos WHERE id=?", [id])
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+pub fn acciones(c: &Connection) -> Result<Vec<Accion>, String> {
+    let mut s = c
+        .prepare("SELECT id,nombre,pasos FROM acciones ORDER BY id")
+        .map_err(|e| e.to_string())?;
+    let filas = s
+        .query_map([], |r| {
+            Ok(Accion {
+                id: r.get(0)?,
+                nombre: r.get(1)?,
+                pasos: serde_json::from_str(&r.get::<_, String>(2)?)
+                    .unwrap_or(serde_json::Value::Null),
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string());
+    filas
+}
+pub fn accion_guardar(c: &Connection, x: &Accion) -> Result<Accion, String> {
+    let pasos = serde_json::to_string(&x.pasos).map_err(|e| e.to_string())?;
+    let id = if x.id == 0 {
+        c.execute(
+            "INSERT INTO acciones(nombre,pasos) VALUES(?,?)",
+            params![x.nombre, pasos],
+        )
+        .map_err(|e| e.to_string())?;
+        c.last_insert_rowid()
+    } else {
+        c.execute(
+            "UPDATE acciones SET nombre=?,pasos=? WHERE id=?",
+            params![x.nombre, pasos, x.id],
+        )
+        .map_err(|e| e.to_string())?;
+        x.id
+    };
+    Ok(Accion { id, ..x.clone() })
+}
+pub fn accion_borrar(c: &Connection, id: i64) -> Result<(), String> {
+    c.execute("DELETE FROM acciones WHERE id=?", [id])
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+pub fn bovedas(c: &Connection) -> Result<Vec<EntradaBoveda>, String> {
+    let mut s = c
+        .prepare("SELECT id,titulo,creado FROM boveda ORDER BY id")
+        .map_err(|e| e.to_string())?;
+    let filas = s
+        .query_map([], |r| {
+            Ok(EntradaBoveda {
+                id: r.get(0)?,
+                titulo: r.get(1)?,
+                creado: r.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string());
+    filas
+}
+pub fn boveda_guardar(
+    c: &Connection,
+    titulo: &str,
+    secreto: &[u8],
+    creado: i64,
+) -> Result<EntradaBoveda, String> {
+    c.execute(
+        "INSERT INTO boveda(titulo,secreto,creado) VALUES(?,?,?)",
+        params![titulo, secreto, creado],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(EntradaBoveda {
+        id: c.last_insert_rowid(),
+        titulo: titulo.into(),
+        creado,
+    })
+}
+pub fn boveda_secreto(c: &Connection, id: i64) -> Result<Option<Vec<u8>>, String> {
+    c.query_row("SELECT secreto FROM boveda WHERE id=?", [id], |r| r.get(0))
+        .optional()
+        .map_err(|e| e.to_string())
+}
+pub fn boveda_borrar(c: &Connection, id: i64) -> Result<(), String> {
+    c.execute("DELETE FROM boveda WHERE id=?", [id])
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize, Deserialize)]
+struct Exportado {
+    version: u8,
+    clips: Vec<ExportClip>,
+    fragmentos: Vec<Fragmento>,
+    acciones: Vec<Accion>,
+}
+#[derive(Serialize, Deserialize)]
+struct ExportClip {
+    texto: String,
+    creado: i64,
+    fijado: bool,
+}
+pub fn exportar(c: &Connection) -> Result<String, String> {
+    let clips = listar(c, "", u32::MAX)?
+        .into_iter()
+        .filter(|x| x.tipo == "texto")
+        .map(|x| ExportClip {
+            texto: x.texto,
+            creado: x.creado,
+            fijado: x.fijado,
+        })
+        .collect();
+    serde_json::to_string(&Exportado {
+        version: 1,
+        clips,
+        fragmentos: fragmentos(c)?,
+        acciones: acciones(c)?,
+    })
+    .map_err(|e| e.to_string())
+}
+pub fn importar(c: &Connection, json: &str) -> Result<u32, String> {
+    let datos: Exportado = serde_json::from_str(json)
+        .map_err(|_| "El archivo de historial no es válido".to_string())?;
+    let mut total = 0;
+    for clip in datos.clips {
+        if guardar_texto(c, &clip.texto, clip.creado, u32::MAX)? {
+            let id = c.last_insert_rowid();
+            if clip.fijado {
+                fijar(c, id, true)?;
+            }
+            total += 1;
+        }
+    }
+    for f in datos.fragmentos {
+        fragmento_guardar(c, &f)?;
+    }
+    for a in datos.acciones {
+        accion_guardar(c, &a)?;
+    }
+    Ok(total)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn db() -> Connection {
+        abrir_memoria().expect("db")
+    }
+    #[test]
+    fn duplicado_sube_y_suma() {
+        let c = db();
+        assert!(guardar_texto(&c, "uno", 1, 10).unwrap());
+        assert!(!guardar_texto(&c, "uno", 2, 10).unwrap());
+        let x = listar(&c, "", 10).unwrap();
+        assert_eq!(x[0].usos, 1);
+    }
+    #[test]
+    fn recorte_respeta_fijados() {
+        let c = db();
+        guardar_texto(&c, "a", 1, 1).unwrap();
+        fijar(&c, 1, true).unwrap();
+        guardar_texto(&c, "b", 2, 1).unwrap();
+        assert_eq!(listar(&c, "", 10).unwrap().len(), 2);
+    }
+    #[test]
+    fn prefijos_y_palabras() {
+        let c = db();
+        guardar_texto(&c, "http://x dos", 1, 10).unwrap();
+        guardar_texto(&c, "uno dos", 2, 10).unwrap();
+        assert_eq!(listar(&c, "url:", 10).unwrap().len(), 1);
+        assert_eq!(listar(&c, "uno dos", 10).unwrap().len(), 1);
+    }
+    #[test]
+    fn escape_porcentaje() {
+        let c = db();
+        guardar_texto(&c, "100% real", 1, 10).unwrap();
+        assert_eq!(listar(&c, "100%", 10).unwrap().len(), 1);
+        assert_eq!(listar(&c, "100x", 10).unwrap().len(), 0);
+    }
+    #[test]
+    fn exportar_importar() {
+        let c = db();
+        guardar_texto(&c, "hola", 1, 10).unwrap();
+        let json = exportar(&c).unwrap();
+        let d = db();
+        assert_eq!(importar(&d, &json).unwrap(), 1);
+    }
+    #[test]
+    fn ajustes_faltantes() {
+        let a: Ajustes = serde_json::from_str("{}").unwrap();
+        assert_eq!(a.idioma, "es");
+        assert_eq!(a.ia.modelo, "llama3.2");
+    }
+}

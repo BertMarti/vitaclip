@@ -45,7 +45,8 @@ pub struct EstadoLicencia {
 
 /// Comprueba una licencia con la clave oficial. `hoy` es AAAA-MM-DD.
 pub fn verificar(clave: &str, hoy: &str) -> Result<Datos, String> {
-    let pk = VerifyingKey::from_bytes(&CLAVE_PUBLICA).map_err(|_| "Clave pública interna no válida".to_string())?;
+    let pk = VerifyingKey::from_bytes(&CLAVE_PUBLICA)
+        .map_err(|_| "Clave pública interna no válida".to_string())?;
     verificar_con(clave, hoy, &pk)
 }
 
@@ -53,7 +54,8 @@ pub fn verificar_con(clave: &str, hoy: &str, pk: &VerifyingKey) -> Result<Datos,
     let invalida = || "La licencia no es válida. Cópiala entera, sin espacios.".to_string();
     let limpia: String = clave.chars().filter(|c| !c.is_whitespace()).collect();
     let mut partes = limpia.split('.');
-    let (Some(prefijo), Some(datos_b64), Some(firma_b64), None) = (partes.next(), partes.next(), partes.next(), partes.next())
+    let (Some(prefijo), Some(datos_b64), Some(firma_b64), None) =
+        (partes.next(), partes.next(), partes.next(), partes.next())
     else {
         return Err(invalida());
     };
@@ -65,7 +67,8 @@ pub fn verificar_con(clave: &str, hoy: &str, pk: &VerifyingKey) -> Result<Datos,
     let firma = Signature::from_slice(&firma).map_err(|_| invalida())?;
     // Se firma «VITA1.<datos base64url>» para atar el formato a la firma.
     let mensaje = format!("{PREFIJO}.{datos_b64}");
-    pk.verify_strict(mensaje.as_bytes(), &firma).map_err(|_| invalida())?;
+    pk.verify_strict(mensaje.as_bytes(), &firma)
+        .map_err(|_| invalida())?;
     let datos: Datos = serde_json::from_slice(&datos).map_err(|_| invalida())?;
     if datos.p != "pro" {
         return Err("Esta licencia no es de Vitaclip Pro.".into());
@@ -84,18 +87,31 @@ pub fn estado(clave: Option<&str>, hoy: &str) -> EstadoLicencia {
         None => EstadoLicencia::default(),
         Some(c) => match verificar(c, hoy) {
             Ok(d) => desde_datos(d),
-            Err(motivo) => EstadoLicencia { motivo: Some(motivo), ..Default::default() },
+            Err(motivo) => EstadoLicencia {
+                motivo: Some(motivo),
+                ..Default::default()
+            },
         },
     }
 }
 
 fn desde_datos(d: Datos) -> EstadoLicencia {
-    EstadoLicencia { pro: true, nombre: Some(d.n), email: Some(d.e), emitida: Some(d.i), caduca: d.x, motivo: None }
+    EstadoLicencia {
+        pro: true,
+        nombre: Some(d.n),
+        email: Some(d.e),
+        emitida: Some(d.i),
+        caduca: d.x,
+        motivo: None,
+    }
 }
 
 /// Fecha UTC de hoy en AAAA-MM-DD (sin depender de chrono).
 pub fn hoy() -> String {
-    let segundos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let segundos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
     fecha_desde_dias((segundos / 86_400) as i64)
 }
 
@@ -125,11 +141,20 @@ mod pruebas {
     fn emitir(sk: &SigningKey, datos: &Datos) -> String {
         let b64 = URL_SAFE_NO_PAD.encode(serde_json::to_vec(datos).unwrap());
         let firma = sk.sign(format!("{PREFIJO}.{b64}").as_bytes());
-        format!("{PREFIJO}.{b64}.{}", URL_SAFE_NO_PAD.encode(firma.to_bytes()))
+        format!(
+            "{PREFIJO}.{b64}.{}",
+            URL_SAFE_NO_PAD.encode(firma.to_bytes())
+        )
     }
 
     fn datos(x: Option<&str>) -> Datos {
-        Datos { n: "Ana".into(), e: "ana@example.com".into(), p: "pro".into(), i: "2026-10-24".into(), x: x.map(Into::into) }
+        Datos {
+            n: "Ana".into(),
+            e: "ana@example.com".into(),
+            p: "pro".into(),
+            i: "2026-10-24".into(),
+            x: x.map(Into::into),
+        }
     }
 
     #[test]
@@ -137,14 +162,23 @@ mod pruebas {
         let sk = firmante();
         let clave = emitir(&sk, &datos(None));
         let con_saltos = format!("  {}\n{}  ", &clave[..20], &clave[20..]);
-        assert_eq!(verificar_con(&con_saltos, "2030-01-01", &sk.verifying_key()).unwrap(), datos(None));
+        assert_eq!(
+            verificar_con(&con_saltos, "2030-01-01", &sk.verifying_key()).unwrap(),
+            datos(None)
+        );
     }
 
     #[test]
     fn rechaza_datos_manipulados() {
         let sk = firmante();
         let clave = emitir(&sk, &datos(None));
-        let otra = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&Datos { n: "Pirata".into(), ..datos(None) }).unwrap());
+        let otra = URL_SAFE_NO_PAD.encode(
+            serde_json::to_vec(&Datos {
+                n: "Pirata".into(),
+                ..datos(None)
+            })
+            .unwrap(),
+        );
         let partes: Vec<&str> = clave.split('.').collect();
         let falsa = format!("{}.{}.{}", partes[0], otra, partes[2]);
         assert!(verificar_con(&falsa, "2030-01-01", &sk.verifying_key()).is_err());
@@ -155,7 +189,10 @@ mod pruebas {
         let clave = emitir(&SigningKey::from_bytes(&[9u8; 32]), &datos(None));
         assert!(verificar_con(&clave, "2030-01-01", &firmante().verifying_key()).is_err());
         for rara in ["", "VITA1", "VITA1.a.b.c", "OTRA.a.b", "VITA1.%%.%%"] {
-            assert!(verificar_con(rara, "2030-01-01", &firmante().verifying_key()).is_err(), "{rara}");
+            assert!(
+                verificar_con(rara, "2030-01-01", &firmante().verifying_key()).is_err(),
+                "{rara}"
+            );
         }
         // La clave oficial no acepta licencias firmadas con otra.
         assert!(verificar(&clave, "2030-01-01").is_err());
