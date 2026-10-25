@@ -9,6 +9,7 @@ static REGISTRADO: OnceLock<Mutex<Option<Shortcut>>> = OnceLock::new();
 
 pub fn registrar(app: &AppHandle, clave: &str) -> Result<(), String> {
     let shortcut = Shortcut::from_str(clave)
+        .map(crate::teclado::adaptar)
         .map_err(|_| "Ese atajo no es válido o ya lo usa otra aplicación.".to_string())?;
     app.global_shortcut()
         .register(shortcut)

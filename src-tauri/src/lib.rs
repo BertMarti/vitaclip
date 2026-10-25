@@ -7,6 +7,7 @@ mod ia;
 mod licencia;
 mod pegar;
 mod qr;
+mod teclado;
 mod vigia;
 
 use tauri::Manager;
