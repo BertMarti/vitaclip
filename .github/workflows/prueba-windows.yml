@@ -1,0 +1,26 @@
+name: Prueba del atajo en Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  atajo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Compilar
+        working-directory: src-tauri
+        run: cargo build --locked
+      - name: Pulsar el atajo como un usuario
+        shell: pwsh
+        run: ./.github/scripts/prueba-atajo-windows.ps1
+      - name: Guardar capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-windows
+          path: capturas/
