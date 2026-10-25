@@ -32,3 +32,25 @@ jobs:
         run: |
           cargo test --locked
           cargo clippy --locked -- -D warnings
+
+  # El código propio de cada sistema (teclado, marcas de contraseñas, portapapeles) solo se compila en su plataforma.
+  compilar-otros:
+    strategy:
+      fail-fast: false
+      matrix:
+        sistema: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.sistema }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Pruebas de Rust
+        working-directory: src-tauri
+        run: cargo test --locked

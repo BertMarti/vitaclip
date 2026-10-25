@@ -7,6 +7,7 @@ mod estado;
 mod ia;
 mod pegar;
 mod qr;
+mod sensible;
 mod teclado;
 mod util;
 mod video;

@@ -17,6 +17,14 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   xcap. Consecuencia: los .deb/.AppImage piden glibc 2.39 (Ubuntu 24.04+, Debian 13+).
 - **En Windows `xcap::Monitor` no es `Send`**: al hilo de grabación se le pasan las coordenadas y busca el monitor allí. Este tipo de
   error solo sale compilando para Windows: lanza `prueba-windows.yml` antes de publicar.
+- **Seguridad (0.2.2, tras la revisión de la sesión «Revisión de repositorios GitHub», informe en
+  `~/homelab/.wt/mejoras-informes/revision-vitaclip.md`):** (A1) `sensible.rs` lee las marcas «no guardar» de los gestores de
+  contraseñas (Windows: ExcludeClipboardContentFromMonitorProcessing / CanIncludeInClipboardHistory=0; macOS: nspasteboard
+  Concealed/Transient; Linux: x-kde-passwordManagerHint por wl-clipboard-rs o TARGETS de X11) y el vigía no guarda ese contenido;
+  verificado en X11 y en el Wayland de la Pi. (A2) Lo pegado desde la bóveda va con `exclude_from_*` de arboard y se borra a los
+  30 s. (M1) La clave de IA solo se conserva si la URL no cambia y solo viaja por https o a localhost. (M3) Un recorte de vídeo
+  que no cabe aborta la grabación con aviso en vez de cerrar la app. Pendientes del informe: M2 (llavero del sistema), M4
+  (secure_delete/VACUUM), M5 (permisos de -wal/-shm), M6 (sumas y atestación de las releases), B1, B2 y mejoras de uso.
 - **Mover y redimensionar en Windows (0.2.1):** al empezar un arrastre (`start_dragging`/`start_resize_dragging`) Windows le quita
   el foco a la ventana y el popup, que se oculta al perder el foco, se cerraba y cortaba el movimiento. Ahora lo inicia Rust
   (`ventana_arrastrar`), ignora `Focused(false)` mientras el botón izquierdo siga pulsado (`GetAsyncKeyState`) y devuelve el foco

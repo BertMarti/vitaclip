@@ -87,6 +87,10 @@ pub fn iniciar(app: AppHandle) {
                     continue;
                 }
             }
+            // Lo copiado desde un gestor de contraseñas viene marcado como secreto: nunca se guarda.
+            if crate::sensible::marcado_como_secreto() {
+                continue;
+            }
             if estado.esta_pausado() {
                 continue;
             }

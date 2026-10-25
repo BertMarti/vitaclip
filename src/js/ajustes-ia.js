@@ -35,10 +35,13 @@ async function cambiarProveedor(id) {
   const nuevo = proveedorDe(id);
   const modelo = datos.ajustes.ia.modelo;
   const conservarModelo = modelo && modelo !== anterior.modelo;
+  const url = nuevo.id === 'personalizado' ? datos.ajustes.ia.url : nuevo.url;
   await guardarIa({
     proveedor: id,
-    url: nuevo.id === 'personalizado' ? datos.ajustes.ia.url : nuevo.url,
+    url,
     modelo: conservarModelo ? modelo : nuevo.modelo,
+    // La clave de un proveedor nunca se manda a otro: al cambiar de servidor hay que volver a escribirla.
+    ...(url !== datos.ajustes.ia.url && { clave: '' }),
   });
   pagina.pintar();
 }

@@ -6,7 +6,12 @@ use tauri::{AppHandle, Manager};
 pub enum Contenido {
     Texto(String),
     Imagen(Vec<u8>),
+    /// Texto de la bóveda: va marcado para que ningún historial (Windows, Maccy, Klipper…) lo guarde y se borra a los 30 s.
+    Secreto(String),
 }
+
+/// Tiempo que un secreto pegado desde la bóveda sigue en el portapapeles.
+const VIDA_SECRETO: Duration = Duration::from_secs(30);
 
 pub fn escribir_texto(estado: &Estado, texto: &str) -> Result<(), String> {
     let huella = db::huella(texto.as_bytes());
@@ -23,6 +28,56 @@ pub fn escribir_texto(estado: &Estado, texto: &str) -> Result<(), String> {
         .ok_or("Portapapeles no disponible")?
         .set_text(texto)
         .map_err(|e| e.to_string())
+}
+
+/// Escribe un secreto con las marcas «no guardar» de cada sistema.
+pub fn escribir_secreto(estado: &Estado, texto: &str) -> Result<(), String> {
+    *estado
+        .huella_propia
+        .lock()
+        .map_err(|_| "Estado no disponible".to_string())? = Some(db::huella(texto.as_bytes()));
+    let mut portapapeles = estado
+        .portapapeles
+        .lock()
+        .map_err(|_| "Portapapeles no disponible".to_string())?;
+    let cb = portapapeles.as_mut().ok_or("Portapapeles no disponible")?;
+    #[cfg(windows)]
+    let peticion = {
+        use arboard::SetExtWindows;
+        cb.set()
+            .exclude_from_monitoring()
+            .exclude_from_history()
+            .exclude_from_cloud()
+    };
+    #[cfg(target_os = "macos")]
+    let peticion = {
+        use arboard::SetExtApple;
+        cb.set().exclude_from_history()
+    };
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let peticion = {
+        use arboard::SetExtLinux;
+        cb.set().exclude_from_history()
+    };
+    peticion.text(texto).map_err(|e| e.to_string())
+}
+
+/// A los 30 s borra el portapapeles si sigue conteniendo el secreto.
+fn borrar_secreto_luego(app: AppHandle, huella: String) {
+    std::thread::spawn(move || {
+        std::thread::sleep(VIDA_SECRETO);
+        let Some(estado) = app.try_state::<Estado>() else {
+            return;
+        };
+        let Ok(mut portapapeles) = estado.portapapeles.lock() else {
+            return;
+        };
+        if let Some(cb) = portapapeles.as_mut() {
+            if cb.get_text().map(|t| db::huella(t.as_bytes())).ok() == Some(huella) {
+                let _ = cb.clear();
+            }
+        }
+    });
 }
 
 pub fn escribir_imagen(estado: &Estado, png: &[u8]) -> Result<(), String> {
@@ -53,6 +108,10 @@ pub async fn pegar(app: AppHandle, estado: &Estado, contenido: Contenido) -> Res
     match contenido {
         Contenido::Texto(texto) => escribir_texto(estado, &texto)?,
         Contenido::Imagen(png) => escribir_imagen(estado, &png)?,
+        Contenido::Secreto(texto) => {
+            escribir_secreto(estado, &texto)?;
+            borrar_secreto_luego(app.clone(), db::huella(texto.as_bytes()));
+        }
     }
     if let Some(ventana) = app.get_webview_window("popup") {
         let _ = ventana.hide();

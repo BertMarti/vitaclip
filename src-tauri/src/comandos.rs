@@ -184,8 +184,15 @@ pub fn ajustes_guardar(
     let modo = std::mem::take(&mut ajustes.ventana.modo);
     ajustes.ventana = anterior.ventana.clone();
     ajustes.ventana.modo = modo;
+    // La clave guardada solo se conserva para la MISMA URL: así nunca se manda a otro servidor sin volver a escribirla.
     if ajustes.ia.clave.starts_with("••••") {
-        ajustes.ia.clave = anterior.ia.clave;
+        let misma_url = ajustes.ia.url.trim().trim_end_matches('/')
+            == anterior.ia.url.trim().trim_end_matches('/');
+        ajustes.ia.clave = if misma_url {
+            anterior.ia.clave.clone()
+        } else {
+            String::new()
+        };
     }
     if ajustes.atajos.popup != anterior.atajos.popup
         || ajustes.atajos.captura != anterior.atajos.captura
@@ -346,7 +353,7 @@ pub async fn boveda_pegar(app: AppHandle, e: State<'_, Estado>, id: i64) -> Resu
     pegar::pegar(
         app,
         &e,
-        Contenido::Texto(String::from_utf8_lossy(&texto).into_owned()),
+        Contenido::Secreto(String::from_utf8_lossy(&texto).into_owned()),
     )
     .await
 }

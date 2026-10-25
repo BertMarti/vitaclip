@@ -26,6 +26,11 @@ pub async fn ejecutar(
             .to_string(),
         _ => return Err("Acción de IA desconocida.".into()),
     };
+    if !cfg.clave.is_empty() && !url_segura(&cfg.url) {
+        return Err(
+            "Por seguridad, la clave de IA solo se envía por https (o a este mismo equipo).".into(),
+        );
+    }
     let url = format!("{}/chat/completions", cfg.url.trim_end_matches('/'));
     let cliente = reqwest::Client::new();
     let mut solicitud = cliente.post(&url).timeout(Duration::from_secs(60)).json(&json!({
@@ -58,6 +63,28 @@ pub async fn ejecutar(
         .as_str()
         .map(str::to_owned)
         .ok_or_else(|| "Respuesta de IA no válida.".into())
+}
+
+/// https, o http solo hacia este mismo equipo (Ollama local).
+fn url_segura(url: &str) -> bool {
+    let url = url.trim().to_ascii_lowercase();
+    if url.starts_with("https://") {
+        return true;
+    }
+    let Some(resto) = url.strip_prefix("http://") else {
+        return false;
+    };
+    let anfitrion = resto.split('/').next().unwrap_or("");
+    let anfitrion = if anfitrion.starts_with('[') {
+        anfitrion
+            .split(']')
+            .next()
+            .map(|h| h.trim_start_matches('['))
+            .unwrap_or("")
+    } else {
+        anfitrion.split(':').next().unwrap_or("")
+    };
+    matches!(anfitrion, "localhost" | "127.0.0.1" | "::1")
 }
 
 pub async fn probar(cfg: &ConfigIa) -> Result<String, String> {
@@ -123,6 +150,24 @@ mod pruebas {
             modelo: "modelo-prueba".into(),
             clave: clave.into(),
         }
+    }
+
+    #[test]
+    fn la_clave_solo_viaja_por_https_o_al_propio_equipo() {
+        assert!(url_segura("https://api.groq.com/openai/v1"));
+        assert!(url_segura("http://localhost:11434/v1"));
+        assert!(url_segura("http://127.0.0.1:8080"));
+        assert!(url_segura("http://[::1]:11434/v1"));
+        assert!(!url_segura("http://ejemplo.com/v1"));
+        assert!(!url_segura("http://localhost.ejemplo.com/v1"));
+        assert!(!url_segura("ftp://ejemplo.com"));
+        let r = tauri::async_runtime::block_on(ejecutar(
+            &cfg("http://ejemplo.com/v1".into(), "sk-prueba"),
+            "resumir",
+            "x",
+            None,
+        ));
+        assert!(r.unwrap_err().contains("https"));
     }
 
     #[test]

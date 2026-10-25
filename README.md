@@ -94,7 +94,7 @@ terminar, pulsa **Detener** o el mismo atajo.
 - **22 transformaciones de texto:** MAYÚSCULAS, Tipo Título, camelCase, snake_case, JSON bonito, Base64, URL, quitar tildes, ordenar líneas…
 - **Calculadora** en el buscador: `=21*1,21` → `25,41`, `=200*15%` → `30`.
 - **Fragmentos** con variables (`{fecha}`, `{hora}`, `{portapapeles}`, `{uuid}`, `{cursor}`) y campos que se rellenan al pegar (`{campo:Nombre}`).
-- **Bóveda cifrada** para contraseñas y datos sensibles (Argon2id + XChaCha20-Poly1305). Lo que pegas desde ella no entra en el historial.
+- **Bóveda cifrada** para contraseñas y datos sensibles (Argon2id + XChaCha20-Poly1305). Lo que pegas desde ella va marcado para que ningún historial lo guarde (tampoco el de Windows) y se borra del portapapeles a los 30 segundos.
 - **IA opcional** para traducir, resumir, corregir o reescribir, con tu [Ollama](https://ollama.com) local o una clave gratuita de Groq o Gemini.
 - **Ventana a tu gusto:** junto al ratón o donde la dejaste, con el tamaño que quieras, en tema claro u oscuro, en español o inglés.
 
@@ -103,9 +103,10 @@ Guía completa: **[docs/USO.md](docs/USO.md)**.
 ## Privacidad
 
 - Todo se guarda **solo en tu equipo**, en una base de datos SQLite. Sin telemetría, sin cuentas y sin anuncios.
+- **Respeta a los gestores de contraseñas:** lo que copias desde KeePassXC, 1Password, Bitwarden y similares (que lo marcan como secreto) no entra en el historial.
 - Por defecto **no se guardan** números de tarjeta ni claves con pinta de token (`ghp_…`, `sk-…`, `AKIA…`), y puedes añadir tus propios patrones.
 - Puedes **pausar la captura** del portapapeles desde la bandeja.
-- La IA solo se usa si tú la configuras, y solo con el texto que le pidas.
+- La IA solo se usa si tú la configuras, y solo con el texto que le pidas. Tu clave solo viaja por https (o a tu propio equipo) y nunca se envía a un servidor distinto del que la escribiste.
 
 ## Compilar desde el código
 

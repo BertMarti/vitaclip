@@ -180,7 +180,22 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
                     continue;
                 }
                 ultimo = Some(t);
-                let _ = tx.try_send((t, recortar_frame(frame, region_x, region_y, rw, rh)));
+                match recortar_frame(frame, region_x, region_y, rw, rh) {
+                    // El codificador espera siempre el mismo tamaño.
+                    Some(f) if f.width == rw && f.height == rh => {
+                        let _ = tx.try_send((t, f));
+                    }
+                    _ => {
+                        let app = app_hilo.clone();
+                        thread::spawn(move || {
+                            abortar(
+                                &app,
+                                "La zona elegida no cabe en la pantalla que se está grabando.",
+                            )
+                        });
+                        break;
+                    }
+                }
             }
         }
         let _ = grabador.stop();
@@ -209,13 +224,18 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
     Ok(())
 }
 
-fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> xcap::Frame {
+/// Recorta la zona del fotograma; `None` si no cabe (p. ej. en Wayland se eligió otra pantalla en el diálogo del sistema).
+fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> Option<xcap::Frame> {
     let x = x.max(0) as u32;
     let y = y.max(0) as u32;
     let w = w.min(f.width.saturating_sub(x)) & !1;
     let h = h.min(f.height.saturating_sub(y)) & !1;
+    let necesarios = (y as usize + h as usize) * f.width as usize * 4;
+    if w < 2 || h < 2 || f.raw.len() < necesarios {
+        return None;
+    }
     if x == 0 && y == 0 && f.width == w && f.height == h {
-        return f;
+        return Some(f);
     }
     let mut raw = Vec::with_capacity(w as usize * h as usize * 4);
     for fila in 0..h as usize {
@@ -225,7 +245,7 @@ fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> xcap::F
     f.width = w;
     f.height = h;
     f.raw = raw;
-    f
+    Some(f)
 }
 
 fn codificar_cola(
@@ -446,6 +466,18 @@ fn codificar_sinteticos(ruta: &std::path::Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn recorte_que_no_cabe_no_rompe_la_app() {
+        let f = || xcap::Frame::new(8, 6, vec![0; 8 * 6 * 4]);
+        assert!(recortar_frame(f(), 10, 0, 4, 4).is_none());
+        assert!(recortar_frame(f(), 0, 6, 4, 4).is_none());
+        assert!(recortar_frame(xcap::Frame::new(8, 6, vec![0; 10]), 0, 0, 8, 6).is_none());
+        let r = recortar_frame(f(), 2, 2, 4, 4).expect("cabe");
+        assert_eq!((r.width, r.height, r.raw.len()), (4, 4, 4 * 4 * 4));
+        // Se recorta a lo que cabe: 4 columnas desde x = 6 en un fotograma de 8 dejan 2.
+        assert_eq!(recortar_frame(f(), 6, 0, 4, 4).map(|r| r.width), Some(2));
+    }
+
     #[test]
     fn pares() {
         assert_eq!(recorte(1, 2, 5, 7), (1, 2, 4, 6));
