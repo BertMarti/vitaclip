@@ -26,9 +26,11 @@ pub fn registrar(app: &AppHandle, ajustes: &db::Atajos) -> Result<(), String> {
             continue;
         }
         // Por tecla física en cualquier distribución de teclado (ver teclado.rs).
-        let s = Shortcut::from_str(texto).map(crate::teclado::adaptar).map_err(|_| {
-            format!("El atajo de {nombre} no es válido o ya lo usa otra aplicación.")
-        })?;
+        let s = Shortcut::from_str(texto)
+            .map(crate::teclado::adaptar)
+            .map_err(|_| {
+                format!("El atajo de {nombre} no es válido o ya lo usa otra aplicación.")
+            })?;
         if nuevos.insert(s, accion).is_some() {
             return Err("Dos acciones no pueden usar el mismo atajo.".into());
         }
@@ -72,16 +74,9 @@ pub fn accion_para(shortcut: &Shortcut) -> Option<&'static str> {
 pub fn ejecutar(app: &AppHandle, shortcut: &Shortcut) {
     match accion_para(shortcut) {
         Some("popup") => alternar_popup(app),
-        Some("captura") => {
-            let _ = captura::iniciar(app.clone(), "imagen".into());
-        }
-        Some("video") => {
-            if video::grabando(app) {
-                let _ = video::parar(app.clone());
-            } else {
-                let _ = captura::iniciar(app.clone(), "video".into());
-            }
-        }
+        // Fuera del hilo principal: capturar y parar un vídeo tardan y no deben congelar la app.
+        Some("captura") => captura::iniciar_en_hilo(app.clone(), "imagen"),
+        Some("video") => video::alternar(app.clone()),
         _ => {}
     }
 }
@@ -101,9 +96,10 @@ pub fn mostrar_popup(app: &AppHandle) {
                     .and_then(|x| serde_json::from_str::<db::Ajustes>(&x).ok())
             })
             .unwrap_or_default();
-        let _ = w.set_size(tauri::PhysicalSize::new(
-            ajustes.ventana.ancho.max(300),
-            ajustes.ventana.alto.max(320),
+        // El tamaño se guarda en píxeles lógicos para que se vea igual con cualquier escalado de pantalla.
+        let _ = w.set_size(tauri::LogicalSize::new(
+            f64::from(ajustes.ventana.ancho.max(300)),
+            f64::from(ajustes.ventana.alto.max(320)),
         ));
         if ajustes.ventana.modo == "recordar" {
             if let (Some(x), Some(y)) = (ajustes.ventana.x, ajustes.ventana.y) {
@@ -123,8 +119,8 @@ pub fn mostrar_popup(app: &AppHandle) {
         {
             let ventana = w.clone();
             let app = app.clone();
-            thread::spawn(move || {
-                thread::sleep(Duration::from_millis(60));
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(60));
                 if !ventana.is_focused().unwrap_or(false) {
                     let _ = app.run_on_main_thread(move || {
                         let _ = ventana.set_focus();
@@ -184,8 +180,9 @@ pub fn guardar_geometria(app: &AppHandle, w: &WebviewWindow) {
     };
     a.ventana.x = Some(p.x);
     a.ventana.y = Some(p.y);
-    a.ventana.ancho = s.width.max(300);
-    a.ventana.alto = s.height.max(320);
+    let escala = w.scale_factor().unwrap_or(1.0).max(0.1);
+    a.ventana.ancho = ((f64::from(s.width) / escala).round() as u32).max(300);
+    a.ventana.alto = ((f64::from(s.height) / escala).round() as u32).max(320);
     if let Ok(serializado) = serde_json::to_string(&a) {
         let _ = db::ajuste_guardar(&c, "ajustes", &serializado);
         *ultimo = Some(ahora);

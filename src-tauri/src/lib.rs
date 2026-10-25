@@ -22,9 +22,9 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if args.iter().any(|x| x == "--captura") {
-                let _ = captura::iniciar(app.clone(), "imagen".into());
+                captura::iniciar_en_hilo(app.clone(), "imagen");
             } else if args.iter().any(|x| x == "--video") {
-                let _ = captura::iniciar(app.clone(), "video".into());
+                video::alternar(app.clone());
             } else {
                 atajo::mostrar_popup(app);
             }
@@ -97,9 +97,9 @@ pub fn run() {
             vigia::iniciar(app.handle().clone());
             construir_bandeja(app)?;
             if std::env::args().any(|x| x == "--captura") {
-                let _ = captura::iniciar(app.handle().clone(), "imagen".into());
+                captura::iniciar_en_hilo(app.handle().clone(), "imagen");
             } else if std::env::args().any(|x| x == "--video") {
-                let _ = captura::iniciar(app.handle().clone(), "video".into());
+                video::alternar(app.handle().clone());
             } else if std::env::args().any(|x| x == "--mostrar") {
                 atajo::mostrar_popup(app.handle());
             }
@@ -180,15 +180,9 @@ fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     tray.on_menu_event(move |app, event| match event.id().as_ref() {
         "abrir" => atajo::mostrar_popup(app),
         "captura" => {
-            let _ = captura::iniciar(app.clone(), "imagen".into());
+            captura::iniciar_en_hilo(app.clone(), "imagen");
         }
-        "video" => {
-            if video::grabando(app) {
-                let _ = video::parar(app.clone());
-            } else {
-                let _ = captura::iniciar(app.clone(), "video".into());
-            }
-        }
+        "video" => video::alternar(app.clone()),
         "ajustes" => {
             let _ = atajo::abrir_ajustes(app, false);
         }

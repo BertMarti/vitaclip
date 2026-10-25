@@ -395,13 +395,18 @@ pub fn ventana_ocultar(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 #[tauri::command]
-pub fn ajustes_abrir(app: AppHandle, bienvenida: Option<bool>) -> Result<(), String> {
+// async: crear ventanas desde un comando síncrono bloquea Tauri en Windows.
+pub async fn ajustes_abrir(app: AppHandle, bienvenida: Option<bool>) -> Result<(), String> {
     atajo::abrir_ajustes(&app, bienvenida.unwrap_or(false))
 }
 
 #[tauri::command]
 pub fn captura_iniciar(app: AppHandle, modo: String) -> Result<(), String> {
-    crate::captura::iniciar(app, modo)
+    if modo != "imagen" && modo != "video" {
+        return Err("Modo de captura no válido".into());
+    }
+    crate::captura::iniciar_en_hilo(app, &modo);
+    Ok(())
 }
 #[tauri::command]
 pub fn captura_info(e: State<'_, Estado>) -> Result<crate::captura::Info, String> {
@@ -429,12 +434,19 @@ pub fn captura_cancelar(app: AppHandle, e: State<'_, Estado>) -> Result<(), Stri
     Ok(())
 }
 #[tauri::command]
-pub fn video_iniciar(app: AppHandle, region: Option<crate::video::Region>) -> Result<(), String> {
-    crate::video::iniciar(app, region)
+pub async fn video_iniciar(
+    app: AppHandle,
+    region: Option<crate::video::Region>,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || crate::video::iniciar(app, region))
+        .await
+        .map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub fn video_parar(app: AppHandle) -> Result<String, String> {
-    crate::video::parar(app)
+pub async fn video_parar(app: AppHandle) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || crate::video::parar(app))
+        .await
+        .map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub fn video_estado(app: AppHandle) -> Result<crate::video::EstadoVideo, String> {

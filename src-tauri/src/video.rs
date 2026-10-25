@@ -1,6 +1,9 @@
 use crate::{db, estado::Estado, util};
 use openh264::{
-    encoder::{BitRate, Encoder, EncoderConfig, FrameRate, RateControlMode, UsageType},
+    encoder::{
+        BitRate, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, QpRange, RateControlMode,
+        UsageType,
+    },
     formats::{RgbaSliceU8, YUVBuffer},
     OpenH264API,
 };
@@ -68,9 +71,29 @@ fn carpetas(app: &AppHandle) -> Result<(PathBuf, db::Video), String> {
     Ok((dir, cfg.video))
 }
 
+/// Atajo y bandeja: si graba, para; si no, abre el selector de zona en modo vídeo. Siempre fuera del hilo principal.
+pub fn alternar(app: AppHandle) {
+    if grabando(&app) {
+        thread::spawn(move || {
+            if let Err(mensaje) = parar(app.clone()) {
+                let _ = app.emit("video-error", serde_json::json!({ "mensaje": mensaje }));
+            }
+        });
+    } else {
+        crate::captura::iniciar_en_hilo(app, "video");
+    }
+}
+
 pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
-    if let Some(w) = app.get_webview_window("captura") {
-        let _ = w.close();
+    // Monitor de la pantalla congelada donde se eligió la zona (si no hay, el del ratón).
+    let monitor_elegido = app.try_state::<Estado>().and_then(|e| {
+        e.captura
+            .lock()
+            .ok()
+            .and_then(|c| c.as_ref().map(|c| (c.monitor_x, c.monitor_y)))
+    });
+    if let Some(e) = app.try_state::<Estado>() {
+        crate::captura::cerrar(&app, &e);
     }
     let estado = app.state::<Estado>();
     let mut guard = estado
@@ -85,11 +108,15 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
     let ruta = util::nombre_unico(&dir, "mp4");
     let (mx, my, monitor) = {
         let popup = app.get_webview_window("popup");
-        let p = popup
-            .as_ref()
-            .and_then(|w| w.cursor_position().ok())
-            .map(|p| (p.x as i32, p.y as i32))
-            .unwrap_or((0, 0));
+        let p = monitor_elegido
+            .map(|(x, y)| (x + 1, y + 1))
+            .unwrap_or_else(|| {
+                popup
+                    .as_ref()
+                    .and_then(|w| w.cursor_position().ok())
+                    .map(|p| (p.x as i32, p.y as i32))
+                    .unwrap_or((0, 0))
+            });
         let m = xcap::Monitor::from_point(p.0, p.1)
             .or_else(|_| {
                 xcap::Monitor::all()
@@ -125,13 +152,23 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
     let ruta_hilo = ruta.clone();
     let (tx, rxq) = sync_channel::<(f64, xcap::Frame)>(8);
     let captura_detener = detener.clone();
+    let app_hilo = app.clone();
     let captura = thread::spawn(move || {
-        let Ok((grabador, rx_frames)) = monitor.video_recorder() else {
-            return;
+        let grabador = monitor
+            .video_recorder()
+            .map_err(|e| e.to_string())
+            .and_then(|(g, rx)| g.start().map(|_| (g, rx)).map_err(|e| e.to_string()));
+        let (grabador, rx_frames) = match grabador {
+            Ok(x) => x,
+            Err(e) => {
+                // Permiso denegado (macOS), diálogo cancelado (Wayland)…: se avisa ya, sin esperar a «Detener».
+                let app = app_hilo.clone();
+                thread::spawn(move || {
+                    abortar(&app, &format!("No se pudo grabar la pantalla: {e}"))
+                });
+                return;
+            }
         };
-        if grabador.start().is_err() {
-            return;
-        }
         let inicio = Instant::now();
         let mut ultimo = None;
         while !captura_detener.load(Ordering::Relaxed) {
@@ -224,6 +261,12 @@ fn configuracion(w: u32, h: u32, fps: u32, maxima: bool) -> EncoderConfig {
             (w as f64 * h as f64 * fps as f64 * factor) as u32,
         ))
         .max_frame_rate(FrameRate::from_hz(fps as f32))
+        .qp(if maxima {
+            QpRange::new(8, 24)
+        } else {
+            QpRange::new(14, 30)
+        })
+        .intra_frame_period(IntraFramePeriod::from_num_frames(fps * 2))
         .num_threads(
             std::thread::available_parallelism()
                 .map(|x| x.get().saturating_sub(1).min(4) as u16)
@@ -263,6 +306,8 @@ fn abrir_indicador(app: &AppHandle, x: i32, y: i32) -> Result<(), String> {
             .always_on_top(true)
             .skip_taskbar(true)
             .inner_size(220., 44.)
+            // En Windows y macOS el indicador no sale en el propio vídeo.
+            .content_protected(true)
             .build()
             .map_err(|e| e.to_string())?
     };
@@ -274,13 +319,26 @@ fn emitir_estado(app: &AppHandle, grabando: bool, segundos: f64) {
     let _ = app.emit("video-estado", EstadoVideo { grabando, segundos });
 }
 
-pub fn parar(app: AppHandle) -> Result<String, String> {
-    let estado = app.state::<Estado>();
-    let mut guard = estado
-        .grabacion
-        .lock()
-        .map_err(|_| "Estado no disponible".to_string())?;
-    let g = guard.take().ok_or("No hay una grabación en curso")?;
+/// Para la grabación por un error, avisa a la interfaz y cierra el indicador.
+fn abortar(app: &AppHandle, mensaje: &str) {
+    let _ = parar_sin_aviso(app);
+    if let Some(w) = app.get_webview_window("grabacion") {
+        let _ = w.close();
+    }
+    emitir_estado(app, false, 0.0);
+    let _ = app.emit("video-error", serde_json::json!({ "mensaje": mensaje }));
+}
+
+/// Saca la grabación del estado (soltando el bloqueo antes de esperar a los hilos) y la termina.
+fn parar_sin_aviso(app: &AppHandle) -> Result<Grabacion, String> {
+    let g = {
+        let estado = app.state::<Estado>();
+        let mut guard = estado
+            .grabacion
+            .lock()
+            .map_err(|_| "Estado no disponible".to_string())?;
+        guard.take().ok_or("No hay una grabación en curso")?
+    };
     let mut g = Arc::try_unwrap(g).map_err(|_| "La grabación sigue en uso".to_string())?;
     g.detener.store(true, Ordering::Relaxed);
     if let Some(h) = g.captura.take() {
@@ -293,6 +351,20 @@ pub fn parar(app: AppHandle) -> Result<String, String> {
         .join()
         .map_err(|_| "Falló el codificador".to_string())?;
     resultado?;
+    Ok(g)
+}
+
+pub fn parar(app: AppHandle) -> Result<String, String> {
+    let g = match parar_sin_aviso(&app) {
+        Ok(g) => g,
+        Err(e) => {
+            if let Some(w) = app.get_webview_window("grabacion") {
+                let _ = w.close();
+            }
+            emitir_estado(&app, false, 0.0);
+            return Err(e);
+        }
+    };
     let ruta = g.ruta.to_string_lossy().into_owned();
     if let Some(w) = app.get_webview_window("grabacion") {
         let _ = w.close();

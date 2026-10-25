@@ -8,6 +8,7 @@
 use tauri_plugin_global_shortcut::{Code, Shortcut};
 
 /// (tecla física, código de exploración, tecla virtual que le da `global-hotkey`).
+#[cfg_attr(not(windows), allow(dead_code))]
 const TECLAS: &[(Code, u32, u32)] = &[
     (Code::Digit1, 0x02, 0x31),
     (Code::Digit2, 0x03, 0x32),
@@ -61,6 +62,7 @@ const TECLAS: &[(Code, u32, u32)] = &[
 
 /// Devuelve el `Code` que hay que registrar para que salte la tecla FÍSICA `code`, dada una función que traduce un código de
 /// exploración a la tecla virtual de la distribución activa. Si no se sabe traducir, deja la tecla como estaba.
+#[cfg_attr(not(windows), allow(dead_code))]
 fn adaptar_con(code: Code, vk_de: impl Fn(u32) -> Option<u32>) -> Code {
     let Some(&(_, exploracion, _)) = TECLAS.iter().find(|(c, _, _)| *c == code) else {
         return code;
@@ -113,10 +115,12 @@ mod pruebas {
             (0x2B, 0xBF), // ç
             (0x35, 0xBD), // -  _
         ]);
-        cambios
-            .get(&exploracion)
-            .copied()
-            .or_else(|| TECLAS.iter().find(|(_, e, _)| *e == exploracion).map(|(_, _, vk)| *vk))
+        cambios.get(&exploracion).copied().or_else(|| {
+            TECLAS
+                .iter()
+                .find(|(_, e, _)| *e == exploracion)
+                .map(|(_, _, vk)| *vk)
+        })
     }
 
     #[test]

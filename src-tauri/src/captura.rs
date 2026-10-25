@@ -12,6 +12,9 @@ pub struct Captura {
     pub alto: u32,
     pub escala: f64,
     pub modo: String,
+    /// Esquina del monitor capturado (para grabar luego ese mismo monitor).
+    pub monitor_x: i32,
+    pub monitor_y: i32,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +31,22 @@ fn carpeta(app: &AppHandle) -> PathBuf {
         .unwrap_or_else(|_| app.path().home_dir().unwrap_or_else(|_| PathBuf::from(".")))
         .join("Vitaclip")
 }
+/// Lanza la captura en otro hilo (nunca en el principal: espera, captura y crea una ventana) y avisa si falla.
+pub fn iniciar_en_hilo(app: AppHandle, modo: &str) {
+    let modo = modo.to_string();
+    std::thread::spawn(move || {
+        if let Err(mensaje) = iniciar(app.clone(), modo) {
+            use tauri_plugin_notification::NotificationExt;
+            let _ = app
+                .notification()
+                .builder()
+                .title("No se pudo capturar la pantalla")
+                .body(mensaje)
+                .show();
+        }
+    });
+}
+
 pub fn iniciar(app: AppHandle, modo: String) -> Result<(), String> {
     if modo != "imagen" && modo != "video" {
         return Err("Modo de captura no válido".into());
@@ -67,6 +86,8 @@ pub fn iniciar(app: AppHandle, modo: String) -> Result<(), String> {
         alto,
         escala: escala.into(),
         modo: modo.clone(),
+        monitor_x: monitor.x().unwrap_or(0),
+        monitor_y: monitor.y().unwrap_or(0),
     });
     let w = if let Some(w) = app.get_webview_window("captura") {
         w
@@ -126,18 +147,27 @@ pub fn copiar(app: AppHandle, e: &Estado, png: String) -> Result<(), String> {
     if bytes.len() > 20 * 1024 * 1024 {
         return Err("La imagen supera el límite de 20 MB".into());
     }
-    let img = image::load_from_memory(&bytes).map_err(|_| "Imagen no válida".to_string())?;
-    pegar::escribir_imagen(e, &bytes)?;
-    if let Ok(mut h) = e.huella_propia.lock() {
-        *h = None;
-    }
+    let img = image::load_from_memory(&bytes)
+        .map_err(|_| "Imagen no válida".to_string())?
+        .to_rgba8();
+    // Se recodifica igual que lo hace el vigía: así su huella coincide, el vigía solo la sube y no sale repetida.
+    let mut normalizado = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut normalizado)
+        .write_image(
+            img.as_raw(),
+            img.width(),
+            img.height(),
+            image::ExtendedColorType::Rgba8,
+        )
+        .map_err(|e| e.to_string())?;
+    pegar::escribir_imagen(e, &normalizado)?;
+    let a = ajustes(e)?;
     let c =
         e.db.lock()
             .map_err(|_| "Base de datos no disponible".to_string())?;
-    let a = ajustes(e)?;
     db::guardar_imagen(
         &c,
-        &bytes,
+        &normalizado,
         img.width(),
         img.height(),
         util::ahora(),
