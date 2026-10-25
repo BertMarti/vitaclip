@@ -1,4 +1,4 @@
-// IA en el panel de detalle (Pro): acciones rápidas, orden libre, indicador de carga y resultado pegable.
+// IA en el panel de detalle: acciones rápidas, orden libre, indicador de carga y resultado pegable.
 // Identificadores de acción que entiende Rust (ia_ejecutar):
 //   traducir · resumir · corregir · formal · cercano · explicar_codigo · libre
 
@@ -7,7 +7,7 @@ import { el, poner } from './dom.js';
 import { t } from './i18n.js';
 import { icono } from './iconos.js';
 import { boton, mensajeError, mostrarError } from './comun.js';
-import { estado, pegarTexto, abrirAjustes } from './popup-estado.js';
+import { pegarTexto } from './popup-estado.js';
 
 const ACCIONES_IA = [
   { id: 'traducir', clave: 'ia.traducir', extra: () => t('ia.destinoTraducir') },
@@ -27,11 +27,7 @@ function trabajoVacio(clipId) {
 }
 
 function titulo() {
-  return el('h3', {},
-    icono('chispa'),
-    t('ia.titulo'),
-    !estado.pro && el('span', { class: 'chip chip-pro', text: t('comun.pro') }),
-  );
+  return el('h3', {}, icono('chispa'), t('ia.titulo'));
 }
 
 function botonAccion(clip, accion) {
@@ -96,27 +92,7 @@ function descartar() {
   repintar();
 }
 
-function seccionBloqueada() {
-  const botones = ACCIONES_IA.map(accion => el('button', {
-    type: 'button',
-    class: 'boton-herramienta',
-    text: t(accion.clave),
-    disabled: true,
-  }));
-  return [
-    el('div', { class: 'rejilla-herramientas bloqueada' }, botones),
-    el('p', { class: 'linea-bloqueada' },
-      icono('candado'),
-      el('span', { text: t('ia.bloqueada') }),
-      boton(t('pro.ver'), abrirAjustes, { clase: 'boton-enlace navegable' }),
-    ),
-  ];
-}
-
 function contenido(clip) {
-  if (!estado.pro) {
-    return seccionBloqueada();
-  }
   return [
     el('div', { class: 'rejilla-herramientas' }, ACCIONES_IA.map(accion => botonAccion(clip, accion))),
     formularioLibre(clip),

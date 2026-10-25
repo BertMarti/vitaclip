@@ -1,0 +1,422 @@
+/* Popup compacto al estilo Ditto: cabecera (buscador y pestañas de icono), lista a todo el ancho y pie fino.
+   Se ve bien de 300 a 600 px de ancho. */
+
+body.popup {
+  overflow: hidden;
+  background: var(--superficie);
+  font-size: 12.5px;
+}
+
+.ventana {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  border: 1px solid var(--borde-fuerte);
+  background: var(--superficie);
+}
+
+/* ---------- Cabecera ---------- */
+
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 6px 0;
+  border-bottom: 1px solid var(--borde);
+  user-select: none;
+}
+
+.busqueda {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--superficie-2);
+  transition: border-color 100ms ease, box-shadow 100ms ease;
+}
+
+.busqueda:focus-within {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px var(--foco);
+  background: var(--superficie);
+}
+
+.icono-buscar {
+  display: grid;
+  place-items: center;
+  color: var(--texto-suave);
+}
+
+.icono-buscar .icono {
+  width: 15px;
+  height: 15px;
+}
+
+.buscador {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 13.5px;
+}
+
+.buscador::placeholder {
+  color: var(--texto-suave);
+  opacity: 0.85;
+}
+
+.pestanas {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding-bottom: 2px;
+}
+
+.pestana {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.pestana .icono {
+  width: 16px;
+  height: 16px;
+}
+
+.pestana:hover {
+  background: var(--superficie-2);
+  color: var(--texto);
+}
+
+.pestana.activa {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+}
+
+.pestana.activa::after {
+  content: "";
+  position: absolute;
+  right: 9px;
+  bottom: -3px;
+  left: 9px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acento);
+}
+
+.pestana-ajustes {
+  margin-left: auto;
+}
+
+/* ---------- Contenido y lista ---------- */
+
+.contenido {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.zona-lista {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.barra-lista {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 3px 6px 3px 10px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 11.5px;
+}
+
+.barra-lista-botones {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lista {
+  flex: 1;
+  min-height: 0;
+  padding: 3px 4px 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.grupo {
+  padding: 5px 8px 1px 25px;
+  color: var(--texto-suave);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fila {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 6px;
+  color: var(--texto);
+  cursor: default;
+  user-select: none;
+}
+
+.fila:hover {
+  background: var(--superficie-2);
+}
+
+.fila.seleccionada {
+  background: var(--acento-suave);
+}
+
+.fila.seleccionada::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acento);
+}
+
+.fila-numero {
+  width: 10px;
+  flex: none;
+  color: var(--texto-suave);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.icono-tipo,
+.miniatura {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--texto-suave);
+}
+
+.icono-tipo .icono,
+.miniatura .icono {
+  width: 14px;
+  height: 14px;
+}
+
+.fila.seleccionada .icono-tipo {
+  color: var(--acento-texto);
+}
+
+.miniatura {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.miniatura img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miniatura.cargada {
+  outline: 1px solid var(--borde);
+}
+
+.muestra-mini {
+  width: 12px;
+  height: 12px;
+  margin: 0 3px;
+  flex: none;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.fila-texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fila-texto strong {
+  font-weight: 600;
+}
+
+mark {
+  border-radius: 3px;
+  background: var(--marca);
+  color: inherit;
+}
+
+.fila-tiempo {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--texto-suave);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.fila-fijado {
+  display: grid;
+  flex: none;
+  color: var(--acento-texto);
+}
+
+.fila-fijado .icono {
+  width: 12px;
+  height: 12px;
+}
+
+.fila-calculo .fila-texto {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-calculo.con-error .fila-texto {
+  color: var(--texto-suave);
+  font-weight: 400;
+}
+
+.fila-acciones {
+  display: none;
+  flex: none;
+  gap: 1px;
+}
+
+.fila:hover .fila-acciones {
+  display: flex;
+}
+
+.fila-archivo:hover .fila-tiempo {
+  display: none;
+}
+
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+.vacio .icono {
+  width: 24px;
+  height: 24px;
+  opacity: 0.55;
+}
+
+.vacio .boton .icono {
+  width: 14px;
+  height: 14px;
+  opacity: 1;
+}
+
+.vacio p {
+  max-width: 280px;
+  margin: 0;
+}
+
+/* ---------- Pie ---------- */
+
+.pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  padding: 0 0 0 8px;
+  border-top: 1px solid var(--borde);
+  background: var(--superficie-2);
+  color: var(--texto-suave);
+  font-size: 10.5px;
+  user-select: none;
+}
+
+.pie-pista {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pie-atajo {
+  height: 16px;
+  font-size: 10px;
+}
+
+.pie-grabando {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--peligro);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.pie-grabando:hover {
+  background: var(--peligro-suave);
+}
+
+.asa {
+  display: grid;
+  place-items: end;
+  width: 16px;
+  height: 21px;
+  padding: 0 2px 2px 0;
+  color: var(--texto-suave);
+  cursor: nwse-resize;
+}
+
+.asa .icono {
+  width: 12px;
+  height: 12px;
+}
+
+.popup .avisos {
+  bottom: 30px;
+}

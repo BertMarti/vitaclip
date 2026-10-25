@@ -1,27 +1,26 @@
-// Pestaña Bóveda (Pro): crear, desbloquear, listar títulos, añadir, pegar, borrar y bloquear.
+// Pestaña Bóveda: crear, desbloquear, listar títulos, añadir, pegar, borrar y bloquear.
 // Nunca se muestran secretos: Rust solo devuelve {id, titulo, creado}.
 
 import * as api from './api.js';
 import { el, poner } from './dom.js';
 import { t, idiomaActual } from './i18n.js';
 import { icono } from './iconos.js';
-import { aviso, boton, botonConfirmar, intentar, mensajeError, tarjetaPro } from './comun.js';
+import { aviso, boton, botonConfirmar, intentar, mensajeError } from './comun.js';
 import { coincide, haceCuanto } from './herramientas/buscar.js';
-import { estado, ui, abrirAjustes, pegarDeBoveda } from './popup-estado.js';
+import { estado, ui, pegarDeBoveda } from './popup-estado.js';
 
 const MINIMO_CONTRASENA = 8;
 
 let estadoBoveda = { existe: false, abierta: false };
 let total = 0;
+// true mientras el panel muestra el formulario de añadir.
+let anadiendo = false;
 
 async function leerEstado() {
   estadoBoveda = (await api.bovedaEstado()) ?? { existe: false, abierta: false };
 }
 
 async function cargar(consulta) {
-  if (!estado.pro) {
-    return [];
-  }
   await leerEstado();
   if (!estadoBoveda.abierta) {
     return [];
@@ -120,9 +119,6 @@ function formularioDesbloquear() {
 }
 
 function pantalla() {
-  if (!estado.pro) {
-    return tarjetaPro('boveda.proTitulo', ['boveda.pro1', 'boveda.pro2', 'boveda.pro3'], abrirAjustes);
-  }
   if (!estadoBoveda.existe) {
     return formularioCrear();
   }
@@ -139,10 +135,19 @@ async function bloquear() {
   await ui.recargar();
 }
 
+function anadir() {
+  anadiendo = true;
+  ui.abrirPanel();
+  document.querySelector('.editor-boveda input')?.focus();
+}
+
 function cabeceraLista() {
   return el('div', { class: 'barra-lista' },
     el('span', { class: 'suave', text: t('boveda.cuantos', { n: total }) }),
-    boton(t('boveda.bloquear'), bloquear, { icono: 'candado', clase: 'boton-pequeno' }),
+    el('span', { class: 'barra-lista-botones' },
+      boton(t('boveda.anadirCorto'), anadir, { icono: 'mas', clase: 'boton-pequeno', titulo: t('boveda.anadir') }),
+      boton(t('boveda.bloquear'), bloquear, { icono: 'candado', clase: 'boton-pequeno' }),
+    ),
   );
 }
 
@@ -159,6 +164,7 @@ function vacio() {
   return el('div', { class: 'vacio' },
     icono('llave'),
     el('p', { text: t(estado.consulta ? 'lista.sinResultados' : 'boveda.vacia') }),
+    !estado.consulta && boton(t('boveda.anadir'), anadir, { icono: 'mas', clase: 'boton-primario' }),
   );
 }
 
@@ -172,12 +178,12 @@ async function pegar(entrada) {
 
 async function borrar(entrada) {
   await intentar(() => api.bovedaBorrar(entrada.id));
+  ui.cerrarPanel();
   await ui.recargar();
 }
 
 function formularioAnadir() {
   const formulario = el('form', { class: 'editor editor-boveda' },
-    el('h3', {}, icono('mas'), t('boveda.anadir')),
     el('label', { class: 'etiqueta' },
       el('span', { text: t('boveda.tituloCampo') }),
       el('input', { type: 'text', class: 'campo', name: 'titulo', placeholder: t('boveda.tituloEjemplo'), autocomplete: 'off', required: true }),
@@ -186,15 +192,20 @@ function formularioAnadir() {
       el('span', { text: t('boveda.secreto') }),
       el('input', { type: 'password', class: 'campo', name: 'secreto', autocomplete: 'new-password', required: true }),
     ),
-    el('button', { type: 'submit', class: 'boton navegable', text: t('comun.guardar') }),
+    el('p', { class: 'suave', text: t('boveda.noHistorial') }),
+    el('div', { class: 'botonera' },
+      el('button', { type: 'submit', class: 'boton boton-primario navegable', text: t('comun.guardar') }),
+    ),
   );
   formulario.addEventListener('submit', async evento => {
     evento.preventDefault();
     const datos = new FormData(formulario);
     const nueva = await intentar(() => api.bovedaGuardar(String(datos.get('titulo')).trim(), String(datos.get('secreto'))));
-    formulario.reset();
     if (nueva) {
+      formulario.reset();
       aviso(t('comun.guardado'), 'ok');
+      anadiendo = false;
+      ui.cerrarPanel();
       await ui.recargar({ clave: nueva.id });
     }
   });
@@ -203,10 +214,10 @@ function formularioAnadir() {
 
 function tarjetaEntrada(entrada) {
   return el('div', { class: 'detalle-clip' },
+    el('h3', { class: 'titulo-entrada', text: entrada.titulo }),
     el('div', { class: 'detalle-meta' },
       el('span', { text: t('boveda.guardadoHace', { cuando: haceCuanto(entrada.creado, Date.now(), idiomaActual()) }) }),
     ),
-    el('h3', { class: 'titulo-entrada', text: entrada.titulo }),
     el('p', { class: 'secreto-oculto', attrs: { 'aria-label': t('boveda.oculto') }, text: '•••••••••••' }),
     el('p', { class: 'suave', text: t('boveda.noHistorial') }),
     el('div', { class: 'botonera' },
@@ -217,10 +228,14 @@ function tarjetaEntrada(entrada) {
 }
 
 function detalle(entrada) {
-  return el('div', { class: 'detalle-boveda' },
-    entrada && tarjetaEntrada(entrada),
-    formularioAnadir(),
-  );
+  if (anadiendo) {
+    return formularioAnadir();
+  }
+  return entrada ? tarjetaEntrada(entrada) : null;
+}
+
+function olvidarFormulario() {
+  anadiendo = false;
 }
 
 export const vistaBoveda = {
@@ -229,6 +244,9 @@ export const vistaBoveda = {
   fila,
   detalle,
   activar: pegar,
+  alSeleccionar: olvidarFormulario,
+  alCerrarPanel: olvidarFormulario,
+  tituloPanel: () => t(anadiendo ? 'boveda.anadir' : 'boveda.uno'),
   pantalla,
   cabeceraLista,
   vacio,
