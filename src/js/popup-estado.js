@@ -4,20 +4,19 @@
 import * as api from './api.js';
 import { t } from './i18n.js';
 import { aviso, intentar, esMac } from './comun.js';
-import { ATAJO_DEFECTO } from './atajos.js';
+import { ATAJOS_DEFECTO } from './atajos.js';
 
 export const estado = {
   pestana: 'historial',
   consulta: '',
   elementos: [],
   indice: 0,
-  pro: false,
-  licencia: { pro: false },
-  ajustes: { atajo: ATAJO_DEFECTO, tema: 'sistema', idioma: 'es' },
+  // true mientras el panel de detalle sustituye a la lista.
+  panel: false,
+  ajustes: { atajos: { ...ATAJOS_DEFECTO }, tema: 'sistema', idioma: 'es' },
   fragmentos: [],
-  acciones: [],
-  // Último clip elegido en el historial: lo usan las acciones personalizadas.
-  clipActual: null,
+  // Grabación en curso (evento video-estado).
+  video: { grabando: false, segundos: 0 },
 };
 
 export const ui = {
@@ -26,6 +25,8 @@ export const ui = {
   repintarDetalle: () => {},
   enfocarBuscador: () => {},
   cambiarPestana: () => {},
+  abrirPanel: () => {},
+  cerrarPanel: () => {},
 };
 
 export function elementoActual() {
@@ -60,6 +61,7 @@ export async function fijarClip(clip) {
 
 export async function borrarClip(clip) {
   await intentar(() => api.clipBorrar(clip.id));
+  ui.cerrarPanel();
   await ui.recargar({ mantener: true });
 }
 
@@ -73,11 +75,6 @@ export async function ultimoTexto() {
 export async function cargarFragmentos() {
   const lista = await intentar(() => api.fragmentosListar());
   estado.fragmentos = Array.isArray(lista) ? lista : [];
-}
-
-export async function cargarAcciones() {
-  const lista = await intentar(() => api.accionesListar());
-  estado.acciones = Array.isArray(lista) ? lista : [];
 }
 
 export function abrirAjustes() {

@@ -1,0 +1,65 @@
+/* Indicador de grabación: 220×44, punto rojo, tiempo y Detener. Se arrastra desde cualquier zona vacía. */
+
+body.pagina-grabacion {
+  overflow: hidden;
+  background: var(--superficie);
+  user-select: none;
+}
+
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100vh;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--borde-fuerte);
+  background: var(--superficie);
+  cursor: grab;
+}
+
+.indicador .punto-rec {
+  width: 10px;
+  height: 10px;
+}
+
+.indicador-tiempo {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.boton-detener {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-detener:hover {
+  background: #b91c1c;
+}
+
+.boton-detener:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.boton-detener:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.boton-detener .icono {
+  width: 14px;
+  height: 14px;
+}

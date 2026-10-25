@@ -1,8 +1,11 @@
 // Simulador en memoria del backend de Rust, para diseñar la interfaz en un navegador.
 // Solo se usa si no existe window.__TAURI__. Desde la consola:
-//   vitaclipSimulador.pro = true            activa las funciones Pro (y lo recuerda)
 //   vitaclipSimulador.emitir('popup-mostrado')
+//   vitaclipSimulador.reiniciar()            vuelve a los ajustes iniciales
+// Las capturas y el vídeo están en simulador-capturas.js.
 // Los errores imitan a los de Rust: cadenas en español listas para enseñar.
+
+import { comandosCapturas } from './simulador-capturas.js';
 
 const MINUTO = 60000;
 const HORA = 60 * MINUTO;
@@ -21,23 +24,14 @@ const IMAGEN_SVG = [
 ].join('');
 
 function clip(id, texto, haceMs, extra = {}) {
-  return {
-    id,
-    tipo: 'texto',
-    texto,
-    creado: ahora - haceMs,
-    usado: ahora - haceMs,
-    usos: 0,
-    fijado: false,
-    ...extra,
-  };
+  return { id, tipo: 'texto', texto, creado: ahora - haceMs, usado: ahora - haceMs, usos: 0, fijado: false, ...extra };
 }
 
 let clips = [
   clip(1, 'ana@example.com', 2 * MINUTO, { fijado: true, usos: 12 }),
   clip(2, 'https://github.com/BertMarti/vitaclip', 9 * MINUTO),
   clip(3, '#1e90ff', 25 * MINUTO),
-  clip(4, '{"proyecto":"Vitaclip","version":"0.1.0","pro":false,"etiquetas":["portapapeles","tauri"]}', 50 * MINUTO),
+  clip(4, '{"proyecto":"Vitaclip","version":"0.2.0","etiquetas":["portapapeles","tauri"]}', 50 * MINUTO),
   clip(5, '', 2 * HORA, { tipo: 'imagen', ancho: 320, alto: 200 }),
   clip(6, 'Hola Marta:\n\nTe envío el presupuesto revisado. Si te parece bien, lo firmamos el lunes.\n\nUn saludo,\nAna', 3 * HORA),
   clip(7, 'hsl(84, 81%, 44%)', 5 * HORA),
@@ -57,35 +51,28 @@ let fragmentos = [
   { id: 3, nombre: 'Respuesta a pedido', abreviatura: 'ped', contenido: 'Hola {campo:Nombre}, te escribo de {campo:Empresa|Acme} por el pedido {campo:Pedido}.' },
 ];
 
-let acciones = [
-  {
-    id: 1,
-    nombre: 'Teléfono bonito',
-    pasos: [
-      { tipo: 'regex', buscar: '\\D', reemplazar: '', flags: 'g' },
-      { tipo: 'regex', buscar: '^(\\d{3})(\\d{3})(\\d{3})$', reemplazar: '$1 $2 $3', flags: '' },
-      { tipo: 'prefijo', texto: '+34 ' },
-    ],
-  },
-];
-
 const boveda = { existe: false, abierta: false, contrasena: '', entradas: [] };
 const oyentes = new Map();
 let siguienteId = 100;
 
 const AJUSTES_INICIALES = {
-  atajo: 'CommandOrControl+Alt+KeyV',
+  atajos: { popup: 'CommandOrControl+Alt+KeyV', captura: 'CommandOrControl+Alt+KeyC', video: 'CommandOrControl+Alt+KeyR' },
+  ventana: { modo: 'raton', x: null, y: null, ancho: 380, alto: 480 },
+  capturas: { carpeta: '' },
+  video: { carpeta: '', fps: 30, calidad: 'alta' },
   tema: 'sistema',
   idioma: 'es',
   pegarAuto: true,
   arrancarConSistema: false,
   pausado: false,
-  limiteHistorial: 300,
+  limiteHistorial: 500,
   ignorar: ['^\\d{13,19}$', '^(ghp_|sk-|AKIA|xox[abp]-)'],
   ia: { proveedor: 'ollama', url: 'http://localhost:11434/v1', modelo: 'llama3.2', clave: '' },
 };
 
-// --- Persistencia ligera (solo para que popup y ajustes compartan estado en el navegador)
+const NOMBRES_ATAJO = { popup: 'Abrir Vitaclip', captura: 'Captura', video: 'Vídeo' };
+
+// --- Persistencia ligera (solo para que las ventanas compartan ajustes en el navegador)
 
 function leerGuardado(clave, defecto) {
   try {
@@ -104,28 +91,18 @@ function guardar(clave, valor) {
   }
 }
 
-let ajustes = { ...AJUSTES_INICIALES, ...leerGuardado('ajustes', {}) };
-let pro = leerGuardado('pro', false);
+let ajustes = { ...AJUSTES_INICIALES, ...leerGuardado('ajustes-v2', {}) };
 
-function emitir(nombre) {
+function emitir(nombre, payload = null) {
   for (const funcion of oyentes.get(nombre) ?? []) {
-    funcion({ event: nombre, payload: null });
+    funcion({ event: nombre, payload });
   }
 }
 
 export const vitaclipSimulador = {
-  get pro() {
-    return pro;
-  },
-  set pro(valor) {
-    pro = Boolean(valor);
-    guardar('pro', pro);
-    emitir('popup-mostrado');
-  },
   emitir,
   reiniciar() {
-    guardar('ajustes', AJUSTES_INICIALES);
-    guardar('pro', false);
+    guardar('ajustes-v2', AJUSTES_INICIALES);
   },
 };
 
@@ -136,12 +113,6 @@ if (globalThis.window) {
 // --- Utilidades
 
 const esperar = ms => new Promise(resolver => setTimeout(resolver, ms));
-
-function exigirPro() {
-  if (!pro) {
-    throw 'Esta función necesita Vitaclip Pro';
-  }
-}
 
 function normalizar(texto) {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -179,6 +150,28 @@ function ocultarClave(clave) {
   return clave && clave.length > 4 ? `••••${clave.slice(-4)}` : '';
 }
 
+// Igual que Rust: atajos duplicados o no registrables → error y no se cambia nada.
+function comprobarAtajos(atajos) {
+  const usados = Object.values(atajos ?? {}).filter(Boolean);
+  if (new Set(usados).size !== usados.length) {
+    throw 'Dos acciones no pueden usar el mismo atajo.';
+  }
+  const ocupado = Object.entries(atajos ?? {}).find(([, atajo]) => /KeyQ$/.test(atajo));
+  if (ocupado) {
+    throw `El atajo de ${NOMBRES_ATAJO[ocupado[0]]} no es válido o ya lo usa otra aplicación.`;
+  }
+}
+
+function abierta() {
+  if (!boveda.abierta) throw 'La bóveda está bloqueada';
+}
+
+function guardarAjustes(nuevos) {
+  const clave = nuevos.ia.clave.startsWith('••••') ? ajustes.ia.clave : nuevos.ia.clave;
+  ajustes = { ...nuevos, ia: { ...nuevos.ia, clave } };
+  guardar('ajustes-v2', ajustes);
+}
+
 // --- Comandos
 
 const comandos = {
@@ -201,7 +194,7 @@ const comandos = {
     clips = incluirFijados ? [] : clips.filter(c => c.fijado);
     emitir('historial-cambiado');
   },
-  historial_exportar: () => '/home/ana/Descargas/vitaclip-historial-2026-10-24.json',
+  historial_exportar: () => '/home/ana/Descargas/vitaclip-historial-2026-10-25.json',
   historial_importar: ({ json }) => {
     let datos;
     try {
@@ -221,59 +214,31 @@ const comandos = {
   fragmento_borrar: ({ id }) => {
     fragmentos = fragmentos.filter(f => f.id !== id);
   },
-  acciones_listar: () => [...acciones],
-  accion_guardar: ({ accion }) => {
-    exigirPro();
-    const guardada = { ...accion, id: accion.id || siguienteId++ };
-    acciones = [...acciones.filter(a => a.id !== guardada.id), guardada];
-    return guardada;
-  },
-  accion_borrar: ({ id }) => {
-    acciones = acciones.filter(a => a.id !== id);
-  },
   ajustes_leer: () => ({ ...ajustes, ia: { ...ajustes.ia, clave: ocultarClave(ajustes.ia.clave) } }),
   ajustes_guardar: ({ ajustes: nuevos }) => {
-    if (/KeyQ$/.test(nuevos.atajo)) throw 'Ese atajo ya lo usa otra aplicación';
-    const clave = nuevos.ia.clave.startsWith('••••') ? ajustes.ia.clave : nuevos.ia.clave;
-    ajustes = { ...nuevos, ia: { ...nuevos.ia, clave } };
-    guardar('ajustes', ajustes);
+    comprobarAtajos(nuevos.atajos);
+    guardarAjustes(nuevos);
     return comandos.ajustes_leer();
-  },
-  licencia_estado: () => (pro
-    ? { pro: true, nombre: 'Ana García', email: 'ana@example.com', emitida: '2026-10-24', caduca: null }
-    : { pro: false, motivo: null }),
-  licencia_activar: ({ clave }) => {
-    if (!/^VITA1\.[\w-]+\.[\w-]+$/.test(clave.trim())) throw 'La licencia no es válida';
-    vitaclipSimulador.pro = true;
-    return comandos.licencia_estado();
-  },
-  licencia_quitar: () => {
-    vitaclipSimulador.pro = false;
-    return comandos.licencia_estado();
   },
   qr_svg: ({ texto }) => {
     if (texto.length > 1500) throw 'El texto es demasiado largo para un QR';
     return qrFalso(texto);
   },
   ia_ejecutar: async ({ accion, texto, extra }) => {
-    exigirPro();
     await esperar(900);
     return `[${accion}${extra ? ` · ${extra}` : ''}] ${texto.slice(0, 200)}`;
   },
   ia_probar: async () => {
-    exigirPro();
     await esperar(600);
     return ajustes.ia.modelo || 'llama3.2';
   },
   boveda_estado: () => ({ existe: boveda.existe, abierta: boveda.abierta }),
   boveda_crear: ({ contrasena }) => {
-    exigirPro();
     if (contrasena.length < 8) throw 'La contraseña maestra debe tener al menos 8 caracteres';
     Object.assign(boveda, { existe: true, abierta: true, contrasena });
     return comandos.boveda_estado();
   },
   boveda_desbloquear: async ({ contrasena }) => {
-    exigirPro();
     await esperar(300);
     if (contrasena !== boveda.contrasena) throw 'Contraseña incorrecta';
     boveda.abierta = true;
@@ -284,13 +249,11 @@ const comandos = {
     return comandos.boveda_estado();
   },
   boveda_listar: () => {
-    exigirPro();
-    if (!boveda.abierta) throw 'La bóveda está bloqueada';
+    abierta();
     return boveda.entradas.map(({ id, titulo, creado }) => ({ id, titulo, creado }));
   },
   boveda_guardar: ({ titulo, secreto }) => {
-    exigirPro();
-    if (!boveda.abierta) throw 'La bóveda está bloqueada';
+    abierta();
     const entrada = { id: siguienteId++, titulo, creado: Date.now(), secreto };
     boveda.entradas.unshift(entrada);
     return { id: entrada.id, titulo, creado: entrada.creado };
@@ -299,8 +262,7 @@ const comandos = {
     boveda.entradas = boveda.entradas.filter(e => e.id !== id);
   },
   boveda_pegar: () => {
-    exigirPro();
-    if (!boveda.abierta) throw 'La bóveda está bloqueada';
+    abierta();
     return true;
   },
   ventana_ocultar: () => {
@@ -312,6 +274,7 @@ const comandos = {
   pausa_cambiar: ({ pausado }) => {
     ajustes.pausado = pausado;
   },
+  ...comandosCapturas(emitir, () => ajustes, guardarAjustes),
 };
 
 export async function simInvoke(comando, args = {}) {

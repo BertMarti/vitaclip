@@ -1,0 +1,287 @@
+/* Vitaclip: estética minimalista y productiva.
+   Tokens de color en :root; modo oscuro por sistema o forzado con [data-tema].
+   base.css: tokens y estilos base comunes a todas las ventanas. */
+
+/* ---------- Tokens ---------- */
+
+:root {
+  --fondo: #f5f6f2;
+  --superficie: #ffffff;
+  --superficie-2: #f2f4ee;
+  --superficie-3: #e9ede3;
+  --borde: #e2e6db;
+  --borde-fuerte: #cdd4c3;
+  --texto: #1b2116;
+  --texto-suave: #6a7461;
+  --acento: #84cc16;
+  --acento-fuerte: #75b512;
+  --acento-texto: #3f6212;
+  --acento-suave: #eef8dc;
+  --sobre-acento: #1a2e05;
+  --marca: #d9f99d;
+  --peligro: #dc2626;
+  --peligro-suave: #fdecec;
+  --aviso: #b45309;
+  --foco: rgba(132, 204, 22, 0.35);
+  --sombra: 0 6px 20px rgba(20, 30, 10, 0.12);
+  --radio: 8px;
+  --radio-grande: 10px;
+  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --fondo: #0f120d;
+    --superficie: #161a13;
+    --superficie-2: #1d2219;
+    --superficie-3: #252b20;
+    --borde: #2a3125;
+    --borde-fuerte: #3a4432;
+    --texto: #e8ede3;
+    --texto-suave: #949f8b;
+    --acento: #a3e635;
+    --acento-fuerte: #b4ef4f;
+    --acento-texto: #bef264;
+    --acento-suave: #222f17;
+    --sobre-acento: #1a2e05;
+    --marca: #3d5714;
+    --peligro: #f87171;
+    --peligro-suave: #3a1c1c;
+    --aviso: #fbbf24;
+    --foco: rgba(163, 230, 53, 0.3);
+    --sombra: 0 6px 20px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+:root[data-tema="oscuro"] {
+  --fondo: #0f120d;
+  --superficie: #161a13;
+  --superficie-2: #1d2219;
+  --superficie-3: #252b20;
+  --borde: #2a3125;
+  --borde-fuerte: #3a4432;
+  --texto: #e8ede3;
+  --texto-suave: #949f8b;
+  --acento: #a3e635;
+  --acento-fuerte: #b4ef4f;
+  --acento-texto: #bef264;
+  --acento-suave: #222f17;
+  --sobre-acento: #1a2e05;
+  --marca: #3d5714;
+  --peligro: #f87171;
+  --peligro-suave: #3a1c1c;
+  --aviso: #fbbf24;
+  --foco: rgba(163, 230, 53, 0.3);
+  --sombra: 0 6px 20px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--borde-fuerte) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--borde-fuerte);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--fuente);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--texto);
+  background: var(--fondo);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--acento-texto);
+  text-underline-offset: 2px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--borde);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: var(--fuente);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.icono {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icono .relleno {
+  fill: currentColor;
+  stroke: none;
+}
+
+.suave {
+  color: var(--texto-suave);
+}
+
+.oculto {
+  display: none !important;
+}
+
+.oculto-accesible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.error-texto {
+  margin: 0;
+  color: var(--peligro);
+  font-size: 12px;
+}
+
+.error-texto:empty {
+  display: none;
+}
+
+.ok-texto {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--acento-texto);
+}
+
+
+/* Avisos (toasts) */
+
+.avisos {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 90vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.aviso {
+  padding: 7px 12px;
+  border-radius: var(--radio);
+  background: var(--texto);
+  color: var(--superficie);
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: var(--sombra);
+  animation: aparecer 120ms ease-out;
+}
+
+.aviso-error {
+  background: var(--peligro);
+  color: #ffffff;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Punto rojo de grabación (popup e indicador). */
+.punto-rec {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: parpadeo 1.2s ease-in-out infinite;
+}
+
+@keyframes parpadeo {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punto-rec {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

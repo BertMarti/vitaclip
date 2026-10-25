@@ -1,13 +1,23 @@
 // Variables de plantilla para los fragmentos.
 //   {fecha} {hora} {fecha_hora} {portapapeles} {uuid} {cursor}
-//   {campo:Nombre} y {campo:Empresa|Acme} (Pro: se piden en un mini formulario).
-
-import { uuid } from './generar.js';
+//   {campo:Nombre} y {campo:Empresa|Acme} (se piden en un mini formulario antes de pegar).
 
 const PATRON_VARIABLE = /\{(fecha_hora|fecha|hora|portapapeles|uuid|cursor)\}/g;
 const PATRON_CAMPO = /\{campo:([^}|]+)(?:\|([^}]*))?\}/g;
 
 export const VARIABLES = ['fecha', 'hora', 'fecha_hora', 'portapapeles', 'uuid', 'cursor'];
+
+// UUID v4 aleatorio (para {uuid}).
+export function uuid() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 function dos(numero) {
   return String(numero).padStart(2, '0');

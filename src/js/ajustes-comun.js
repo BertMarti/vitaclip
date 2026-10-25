@@ -3,36 +3,49 @@
 import * as api from './api.js';
 import { el } from './dom.js';
 import { t } from './i18n.js';
-import { icono } from './iconos.js';
 import { aviso, mostrarError, intentar } from './comun.js';
-import { ATAJO_DEFECTO } from './atajos.js';
+import { ATAJOS_DEFECTO } from './atajos.js';
 
 export const URL_REPO = 'https://github.com/BertMarti/vitaclip';
-export const URL_LICENCIA_PRO = 'https://github.com/BertMarti/vitaclip/issues/new?title=Licencia%20Pro';
-export const VERSION = '0.1.0';
-export const LIMITE_GRATIS = 300;
-export const LIMITE_PRO = 10000;
+export const VERSION = '0.2.0';
+export const LIMITE_MINIMO = 10;
+export const LIMITE_MAXIMO = 10000;
+export const LIMITE_DEFECTO = 500;
 
+// Valores por defecto del contrato (Ajustes en camelCase); lo que llegue de Rust los sustituye.
 export const datos = {
   ajustes: {
-    atajo: ATAJO_DEFECTO,
+    atajos: { ...ATAJOS_DEFECTO },
+    ventana: { modo: 'raton', x: null, y: null, ancho: 380, alto: 480 },
+    capturas: { carpeta: '' },
+    video: { carpeta: '', fps: 30, calidad: 'alta' },
     tema: 'sistema',
     idioma: 'es',
     pegarAuto: true,
     arrancarConSistema: false,
     pausado: false,
-    limiteHistorial: LIMITE_GRATIS,
+    limiteHistorial: LIMITE_DEFECTO,
     ignorar: [],
     ia: { proveedor: 'ollama', url: 'http://localhost:11434/v1', modelo: '', clave: '' },
   },
-  licencia: { pro: false },
 };
 
 export const pagina = {
   pintar: () => {},
 };
 
-// Los guardados se encadenan para que nunca se pisen.
+// Mezcla lo leído de Rust con los valores por defecto, también dentro de los objetos anidados.
+export function mezclarAjustes(base, nuevos = {}) {
+  const salida = { ...base, ...nuevos };
+  for (const clave of ['atajos', 'ventana', 'capturas', 'video', 'ia']) {
+    salida[clave] = { ...base[clave], ...(nuevos?.[clave] ?? {}) };
+  }
+  // El campo `atajo` de la 0.1 ya no existe (Rust lo migra a atajos.popup).
+  delete salida.atajo;
+  return salida;
+}
+
+// Los guardados se encadenan para que nunca se pisen. Devuelven true o el mensaje de error.
 let cola = Promise.resolve(true);
 
 async function guardarAhora(cambios) {
@@ -40,14 +53,14 @@ async function guardarAhora(cambios) {
   datos.ajustes = { ...anterior, ...cambios };
   try {
     const guardados = await api.ajustesGuardar(datos.ajustes);
-    datos.ajustes = { ...datos.ajustes, ...(guardados ?? {}) };
+    datos.ajustes = mezclarAjustes(datos.ajustes, guardados ?? {});
     aviso(t('comun.guardado'), 'ok');
     return true;
   } catch (error) {
     datos.ajustes = anterior;
     mostrarError(error);
     pagina.pintar();
-    return false;
+    return typeof error === 'string' ? error : (error?.message || t('error.generico'));
   }
 }
 
@@ -94,6 +107,30 @@ export function grupoAjustes(...filas) {
   return el('div', { class: 'grupo-ajustes' }, filas);
 }
 
+// Desplegable: opciones = [[valor, claveDeTexto], …].
+export function selector(valor, opciones, alCambiar, etiqueta) {
+  const control = el('select', {
+    class: 'campo',
+    attrs: { 'aria-label': etiqueta },
+    on: { change: evento => alCambiar(evento.target.value) },
+  }, opciones.map(([id, clave]) => el('option', { value: String(id), text: t(clave) })));
+  control.value = String(valor);
+  return control;
+}
+
+// Botones segmentados: opciones = [[valor, claveDeTexto], …].
+export function segmentado(valor, opciones, alCambiar, etiqueta) {
+  return el('div', { class: 'segmentado', attrs: { role: 'radiogroup', 'aria-label': etiqueta } },
+    opciones.map(([id, clave]) => el('button', {
+      type: 'button',
+      class: ['segmento', valor === id && 'activo'],
+      text: t(clave),
+      attrs: { role: 'radio', 'aria-checked': String(valor === id) },
+      on: { click: () => alCambiar(id) },
+    })),
+  );
+}
+
 export function enlaceExterno(url, texto) {
   return el('a', {
     href: url,
@@ -118,8 +155,4 @@ export function botonCopiar(texto) {
 
 export function lineaCodigo(texto) {
   return el('div', { class: 'linea-codigo' }, el('code', { text: texto }), botonCopiar(texto));
-}
-
-export function notaPro(claveTexto) {
-  return el('p', { class: 'linea-bloqueada' }, icono('candado'), el('span', { text: t(claveTexto) }));
 }

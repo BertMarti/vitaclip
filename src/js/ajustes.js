@@ -1,26 +1,27 @@
-// Ventana de ajustes: navegación lateral, General y Atajo.
-// Privacidad está en ajustes-privacidad.js; IA, Licencia y Acerca de, en ajustes-pro.js.
+// Ventana de ajustes: navegación lateral y sección General.
+// Atajos, Capturas y vídeo, Privacidad, IA y Acerca de están en sus propios módulos.
 // Todo se guarda al momento con aviso «Guardado»; los errores se enseñan y se deshace el cambio.
 
 import * as api from './api.js';
 import { el, poner } from './dom.js';
-import { t, setIdioma, idiomaActual } from './i18n.js';
+import { t, setIdioma } from './i18n.js';
 import { icono } from './iconos.js';
-import { aplicarTema, intentar, esMac, boton } from './comun.js';
-import { ATAJO_DEFECTO, atajoDeEvento, atajoLegible, partesLegibles } from './atajos.js';
+import { aplicarTema, intentar } from './comun.js';
 import {
-  datos, pagina, guardar, cabeceraSeccion, filaAjuste, interruptor, grupoAjustes,
-  lineaCodigo, notaPro, LIMITE_GRATIS, LIMITE_PRO,
+  datos, pagina, guardar, mezclarAjustes, cabeceraSeccion, filaAjuste, interruptor, grupoAjustes,
+  selector, segmentado, LIMITE_MINIMO, LIMITE_MAXIMO, LIMITE_DEFECTO,
 } from './ajustes-comun.js';
+import { seccionAtajos, activarBienvenida } from './ajustes-atajos.js';
+import { seccionCapturas } from './ajustes-capturas.js';
 import { seccionPrivacidad } from './ajustes-privacidad.js';
-import { seccionIa, seccionLicencia, seccionAcerca } from './ajustes-pro.js';
+import { seccionIa, seccionAcerca } from './ajustes-ia.js';
 
 const SECCIONES = [
   { id: 'general', clave: 'ajustes.general', icono: 'ajustes', pintar: seccionGeneral },
-  { id: 'atajo', clave: 'ajustes.atajo', icono: 'teclado', pintar: seccionAtajo },
+  { id: 'atajos', clave: 'ajustes.atajos', icono: 'teclado', pintar: seccionAtajos },
+  { id: 'capturas', clave: 'ajustes.capturas', icono: 'captura', pintar: seccionCapturas },
   { id: 'privacidad', clave: 'ajustes.privacidad', icono: 'escudo', pintar: seccionPrivacidad },
-  { id: 'ia', clave: 'ajustes.ia', icono: 'chispa', pintar: seccionIa, pro: true },
-  { id: 'licencia', clave: 'ajustes.licencia', icono: 'insignia', pintar: seccionLicencia },
+  { id: 'ia', clave: 'ajustes.ia', icono: 'chispa', pintar: seccionIa },
   { id: 'acerca', clave: 'ajustes.acerca', icono: 'info', pintar: seccionAcerca },
 ];
 
@@ -30,32 +31,8 @@ const nodos = {
 };
 
 let seccion = 'general';
-let bienvenida = false;
 
 // --- General
-
-function selector(valor, opciones, alCambiar, etiqueta) {
-  const control = el('select', {
-    class: 'campo',
-    attrs: { 'aria-label': etiqueta },
-    on: { change: evento => alCambiar(evento.target.value) },
-  }, opciones.map(([id, clave]) => el('option', { value: id, text: t(clave) })));
-  control.value = valor;
-  return control;
-}
-
-function selectorTema() {
-  const opciones = [['sistema', 'tema.sistema'], ['claro', 'tema.claro'], ['oscuro', 'tema.oscuro']];
-  return el('div', { class: 'segmentado', attrs: { role: 'radiogroup', 'aria-label': t('ajustes.tema') } },
-    opciones.map(([id, clave]) => el('button', {
-      type: 'button',
-      class: ['segmento', datos.ajustes.tema === id && 'activo'],
-      text: t(clave),
-      attrs: { role: 'radio', 'aria-checked': String(datos.ajustes.tema === id) },
-      on: { click: () => cambiarTema(id) },
-    })),
-  );
-}
 
 async function cambiarTema(tema) {
   aplicarTema(tema);
@@ -75,24 +52,19 @@ async function cambiarPausa(pausado) {
   await guardar({ pausado });
 }
 
-function limiteMaximo() {
-  return datos.licencia.pro ? LIMITE_PRO : LIMITE_GRATIS;
-}
-
 function controlLimite() {
-  const maximo = limiteMaximo();
   return el('input', {
     type: 'number',
     class: 'campo campo-numero',
-    min: 10,
-    max: maximo,
+    min: LIMITE_MINIMO,
+    max: LIMITE_MAXIMO,
     step: 10,
-    value: Math.min(datos.ajustes.limiteHistorial, maximo),
+    value: datos.ajustes.limiteHistorial,
     attrs: { 'aria-label': t('ajustes.limite') },
     on: {
       change: evento => {
-        const numero = Math.round(Number(evento.target.value)) || LIMITE_GRATIS;
-        const limite = Math.max(10, Math.min(maximo, numero));
+        const numero = Math.round(Number(evento.target.value)) || LIMITE_DEFECTO;
+        const limite = Math.max(LIMITE_MINIMO, Math.min(LIMITE_MAXIMO, numero));
         evento.target.value = limite;
         guardar({ limiteHistorial: limite });
       },
@@ -100,13 +72,20 @@ function controlLimite() {
   });
 }
 
+function selectorVentana() {
+  const opciones = [['raton', 'ventana.raton'], ['recordar', 'ventana.recordar']];
+  const cambiar = modo => guardar({ ventana: { ...datos.ajustes.ventana, modo } });
+  return selector(datos.ajustes.ventana.modo, opciones, cambiar, t('ajustes.ventana'));
+}
+
 function seccionGeneral() {
   const a = datos.ajustes;
+  const temas = [['sistema', 'tema.sistema'], ['claro', 'tema.claro'], ['oscuro', 'tema.oscuro']];
   return [
     cabeceraSeccion('ajustes.general', 'ajustes.generalDescripcion'),
     grupoAjustes(
       filaAjuste('ajustes.idioma', null, selector(a.idioma, [['es', 'idioma.es'], ['en', 'idioma.en']], cambiarIdioma, t('ajustes.idioma'))),
-      filaAjuste('ajustes.tema', null, selectorTema()),
+      filaAjuste('ajustes.tema', null, segmentado(a.tema, temas, cambiarTema, t('ajustes.tema'))),
     ),
     grupoAjustes(
       filaAjuste('ajustes.pegarAuto', 'ajustes.pegarAutoDescripcion', interruptor(a.pegarAuto, valor => guardar({ pegarAuto: valor }), t('ajustes.pegarAuto'))),
@@ -114,92 +93,8 @@ function seccionGeneral() {
       filaAjuste('ajustes.pausar', 'ajustes.pausarDescripcion', interruptor(a.pausado, cambiarPausa, t('ajustes.pausar'))),
     ),
     grupoAjustes(
-      filaAjuste('ajustes.limite', 'ajustes.limiteDescripcion', controlLimite(),
-        !datos.licencia.pro && notaPro('ajustes.limiteGratis')),
-    ),
-  ];
-}
-
-// --- Atajo
-
-function teclasDe(atajo) {
-  const partes = partesLegibles(atajo, { mac: esMac, idioma: idiomaActual() });
-  return partes.map(parte => el('kbd', { text: parte }));
-}
-
-function grabador() {
-  const error = el('p', { class: 'error-texto', attrs: { role: 'alert' } });
-  const caja = el('button', {
-    type: 'button',
-    class: 'grabador',
-    attrs: { 'aria-label': t('atajo.grabar') },
-  }, teclasDe(datos.ajustes.atajo));
-  const parar = () => {
-    caja.classList.remove('grabando');
-    poner(caja, teclasDe(datos.ajustes.atajo));
-  };
-  caja.addEventListener('click', () => {
-    caja.classList.add('grabando');
-    poner(error);
-    poner(caja, el('span', { class: 'suave', text: t('atajo.pulsa') }));
-  });
-  caja.addEventListener('blur', parar);
-  caja.addEventListener('keydown', evento => alGrabar(evento, caja, error, parar));
-  return el('div', { class: 'grabador-zona' }, caja, error);
-}
-
-async function alGrabar(evento, caja, error, parar) {
-  if (!caja.classList.contains('grabando')) {
-    return;
-  }
-  evento.preventDefault();
-  evento.stopPropagation();
-  if (evento.key === 'Escape' && !evento.ctrlKey && !evento.altKey && !evento.shiftKey && !evento.metaKey) {
-    parar();
-    return;
-  }
-  const resultado = atajoDeEvento(evento);
-  if (resultado.pendiente) {
-    return;
-  }
-  if (resultado.error) {
-    error.textContent = t(`atajo.${resultado.error}`);
-    return;
-  }
-  caja.classList.remove('grabando');
-  if (await guardar({ atajo: resultado.atajo })) {
-    bienvenida = false;
-  }
-  pintar();
-}
-
-function avisoBienvenida() {
-  return el('div', { class: 'bienvenida' },
-    el('div', { class: 'bienvenida-icono' }, icono('teclado')),
-    el('div', {},
-      el('strong', { text: t('atajo.bienvenidaTitulo') }),
-      el('p', { text: t('atajo.bienvenidaTexto', { atajo: atajoLegible(ATAJO_DEFECTO, { mac: esMac, idioma: idiomaActual() }) }) }),
-    ),
-  );
-}
-
-function seccionAtajo() {
-  return [
-    cabeceraSeccion('ajustes.atajo', 'atajo.descripcion'),
-    bienvenida && avisoBienvenida(),
-    grupoAjustes(
-      filaAjuste('atajo.actual', 'atajo.actualDescripcion', el('div', { class: 'atajo-controles' },
-        grabador(),
-        boton(t('atajo.restablecer'), async () => {
-          await guardar({ atajo: ATAJO_DEFECTO });
-          pintar();
-        }, { clase: 'boton-pequeno' }),
-      )),
-    ),
-    el('div', { class: 'tarjeta-info' },
-      el('h3', { text: t('atajo.sistemaTitulo') }),
-      el('p', { class: 'suave', text: t('atajo.sistemaTexto') }),
-      lineaCodigo('vitaclip --mostrar'),
+      filaAjuste('ajustes.limite', 'ajustes.limiteDescripcion', controlLimite()),
+      filaAjuste('ajustes.ventana', 'ajustes.ventanaDescripcion', selectorVentana()),
     ),
   ];
 }
@@ -210,14 +105,13 @@ function pintarNavegacion() {
   const marca = el('div', { class: 'marca' },
     el('span', { class: 'marca-logo' }, icono('fragmento')),
     el('strong', { text: t('app.nombre') }),
-    el('span', { class: ['chip', datos.licencia.pro ? 'chip-pro' : 'chip-gratis'], text: t(datos.licencia.pro ? 'comun.pro' : 'comun.gratis') }),
   );
   const botones = SECCIONES.map(item => el('button', {
     type: 'button',
     class: ['nav-boton', item.id === seccion && 'activo'],
     attrs: { 'aria-current': item.id === seccion ? 'page' : null },
     on: { click: () => irA(item.id) },
-  }, icono(item.icono), el('span', { text: t(item.clave) }), item.pro && !datos.licencia.pro && icono('candado', 'icono-candado')));
+  }, icono(item.icono), el('span', { text: t(item.clave) })));
   poner(nodos.navegacion, marca, el('div', { class: 'nav-lista' }, botones));
 }
 
@@ -236,8 +130,8 @@ function irA(id) {
 
 function leerHash() {
   if (location.hash === '#bienvenida') {
-    bienvenida = true;
-    seccion = 'atajo';
+    activarBienvenida();
+    seccion = 'atajos';
   } else if (SECCIONES.some(item => `#${item.id}` === location.hash)) {
     seccion = location.hash.slice(1);
   }
@@ -246,12 +140,8 @@ function leerHash() {
 async function iniciar() {
   pagina.pintar = pintar;
   leerHash();
-  const [ajustes, licencia] = await Promise.all([
-    intentar(() => api.ajustesLeer()),
-    intentar(() => api.licenciaEstado()),
-  ]);
-  datos.ajustes = { ...datos.ajustes, ...(ajustes ?? {}) };
-  datos.licencia = licencia ?? { pro: false };
+  const ajustes = await intentar(() => api.ajustesLeer());
+  datos.ajustes = mezclarAjustes(datos.ajustes, ajustes ?? {});
   setIdioma(datos.ajustes.idioma);
   aplicarTema(datos.ajustes.tema);
   pintar();

@@ -1,58 +1,48 @@
-// Popup de Vitaclip: marco (buscador, pestañas, pie), lista + detalle y eventos de Rust.
+// Popup de Vitaclip: marco (buscador, pestañas, pie), lista a todo el ancho, panel de detalle y eventos de Rust.
 // Cada pestaña es una «vista» con la misma forma:
-//   cargar(consulta) → elementos · fila(elemento) · detalle(elemento) · activar(elemento)
-//   opcionales: clave(elemento), pantalla(), cabeceraLista(), vacio(), teclas(evento, elemento), grupo(elemento)
+//   cargar(consulta) → elementos · fila(elemento, indice) · detalle(elemento) · activar(elemento)
+//   opcionales: clave, pantalla(), cabeceraLista(), vacio(), teclas(evento, elemento), grupo(elemento),
+//               tituloPanel(elemento), alSeleccionar(elemento), alCerrarPanel()
+// El detalle no va al lado: se abre en un panel que sustituye a la lista (→, Tab o doble clic; ← o Esc vuelve).
 
 import * as api from './api.js';
 import { el, limpiar, poner } from './dom.js';
-import { t, setIdioma, idiomaActual } from './i18n.js';
+import { t, setIdioma } from './i18n.js';
 import { icono } from './iconos.js';
-import { aplicarTema, intentar, esMac } from './comun.js';
-import { atajoLegible } from './atajos.js';
-import { estado, ui, elementoActual, cargarFragmentos, cargarAcciones, abrirAjustes } from './popup-estado.js';
+import { aplicarTema, intentar, hacerArrastrable, aviso } from './comun.js';
+import { completarAtajos } from './atajos.js';
+import { estado, ui, elementoActual, cargarFragmentos, abrirAjustes } from './popup-estado.js';
+import { nodos, pintarMarco, pintarPestanas, pintarPie, enfocarBuscador } from './popup-marco.js';
 import { crearTeclado, primerNavegable } from './popup-teclado.js';
 import { vistaHistorial } from './popup-historial.js';
 import { vistaFragmentos } from './popup-fragmentos.js';
-import { vistaHerramientas } from './popup-herramientas.js';
+import { vistaCapturas } from './popup-capturas.js';
 import { vistaBoveda } from './popup-boveda.js';
 
 const VISTAS = {
   historial: vistaHistorial,
   fragmentos: vistaFragmentos,
-  herramientas: vistaHerramientas,
+  capturas: vistaCapturas,
   boveda: vistaBoveda,
 };
 
-const PESTANAS = [
-  { id: 'historial', clave: 'pestana.historial', icono: 'reloj' },
-  { id: 'fragmentos', clave: 'pestana.fragmentos', icono: 'fragmento' },
-  { id: 'herramientas', clave: 'pestana.herramientas', icono: 'rayo' },
-  { id: 'boveda', clave: 'pestana.boveda', icono: 'llave', pro: true },
-];
 
-const nodos = {
-  buscador: document.querySelector('#buscador'),
-  iconoBuscar: document.querySelector('#icono-buscar'),
-  pestanas: document.querySelector('#pestanas'),
-  contenido: document.querySelector('#contenido'),
-  pie: document.querySelector('#pie'),
-};
 
 let lista = null;
-let detalle = null;
+let panel = null;
 let filas = [];
 let turno = 0;
+let historialPendiente = false;
 
 function vistaActual() {
   return VISTAS[estado.pestana];
 }
 
 function claveDe(elemento) {
-  const vista = vistaActual();
-  return elemento ? (vista.clave?.(elemento) ?? elemento.id) : null;
+  return elemento ? (vistaActual().clave?.(elemento) ?? elemento.id) : null;
 }
 
-// --- Carga y pintado
+// --- Carga y pintado de la lista
 
 function indiceTrasCargar(claveAnterior) {
   if (claveAnterior !== null) {
@@ -79,27 +69,24 @@ async function recargar({ mantener = false, clave = null } = {}) {
 }
 
 function filaVacia() {
-  const vista = vistaActual();
-  const propio = vista.vacio?.();
-  if (propio) {
-    return propio;
-  }
-  return el('div', { class: 'vacio' },
+  return vistaActual().vacio?.() ?? el('div', { class: 'vacio' },
     icono('buscar'),
     el('p', { text: t(estado.consulta ? 'lista.sinResultados' : 'lista.vacia') }),
   );
 }
 
 function crearFila(elemento, indice) {
-  const vista = vistaActual();
-  const fila = vista.fila(elemento, indice);
+  const fila = vistaActual().fila(elemento, indice);
   fila.classList.add('fila');
   fila.setAttribute('role', 'option');
   fila.addEventListener('click', () => {
     seleccionar(indice);
     enfocarBuscador();
   });
-  fila.addEventListener('dblclick', () => activar(indice));
+  fila.addEventListener('dblclick', () => {
+    seleccionar(indice);
+    abrirPanel();
+  });
   return fila;
 }
 
@@ -124,33 +111,28 @@ function pintarFilas() {
 
 function pintar() {
   const vista = vistaActual();
+  const foco = indiceFoco();
   limpiar(nodos.contenido);
   const pantalla = vista.pantalla?.();
-  nodos.contenido.classList.toggle('completa', Boolean(pantalla));
   if (pantalla) {
+    estado.panel = false;
     lista = null;
-    detalle = null;
+    panel = null;
     filas = [];
     nodos.contenido.append(el('section', { class: 'pantalla' }, pantalla));
+    pintarModo();
     return;
   }
   lista = el('div', { class: 'lista', attrs: { role: 'listbox', 'aria-label': t(`pestana.${estado.pestana}`) } });
-  detalle = el('aside', { class: 'detalle' });
+  panel = el('section', { class: 'panel-detalle' });
   pintarFilas();
-  const columna = el('div', { class: 'columna-lista' }, vista.cabeceraLista?.(), lista);
-  nodos.contenido.append(columna, detalle);
+  nodos.contenido.append(el('div', { class: 'zona-lista' }, vista.cabeceraLista?.(), lista), panel);
   marcarSeleccion();
-  pintarDetalle();
-}
-
-function pintarDetalle() {
-  if (!detalle) {
-    return;
+  // El panel tiene que verse antes de pintarlo: no se puede enfocar algo oculto.
+  pintarModo();
+  if (estado.panel) {
+    pintarPanel({ enfocar: true, foco });
   }
-  const elemento = elementoActual();
-  const contenido = vistaActual().detalle(elemento);
-  poner(detalle, contenido ?? el('div', { class: 'detalle-vacio', text: t('detalle.nada') }));
-  detalle.scrollTop = 0;
 }
 
 function marcarSeleccion() {
@@ -167,13 +149,11 @@ function seleccionar(indice) {
     return;
   }
   const nuevo = Math.max(0, Math.min(estado.elementos.length - 1, indice));
-  const cambia = nuevo !== estado.indice;
-  estado.indice = nuevo;
-  marcarSeleccion();
-  if (cambia) {
+  if (nuevo !== estado.indice) {
+    estado.indice = nuevo;
     vistaActual().alSeleccionar?.(elementoActual());
-    pintarDetalle();
   }
+  marcarSeleccion();
 }
 
 function activar(indice = estado.indice) {
@@ -181,81 +161,91 @@ function activar(indice = estado.indice) {
   if (!elemento) {
     return;
   }
-  if (indice !== estado.indice) {
-    seleccionar(indice);
-  }
+  seleccionar(indice);
   vistaActual().activar(elemento);
 }
 
-// --- Marco: pestañas, pie y buscador
+// --- Panel de detalle
 
-function pintarPestanas() {
-  limpiar(nodos.pestanas);
-  PESTANAS.forEach((pestana, posicion) => {
-    const bloqueada = pestana.pro && !estado.pro;
-    const activa = pestana.id === estado.pestana;
-    nodos.pestanas.append(el('button', {
+function barraPanel(elemento) {
+  const titulo = vistaActual().tituloPanel?.(elemento) ?? t(`pestana.${estado.pestana}`);
+  return el('div', { class: 'barra-panel' },
+    el('button', {
       type: 'button',
-      class: ['pestana', activa && 'activa', bloqueada && 'bloqueada'],
-      attrs: {
-        role: 'tab',
-        'aria-selected': String(activa),
-        title: t('pestana.atajo', { tecla: `${esMac ? '⌥' : 'Alt+'}${posicion + 1}` }),
-        tabindex: '-1',
-      },
-      on: { click: () => cambiarPestana(pestana.id) },
-    },
-    icono(pestana.icono),
-    el('span', { text: t(pestana.clave) }),
-    bloqueada && icono('candado', 'icono-candado')));
-  });
-}
-
-function tecla(texto) {
-  return el('kbd', { text: texto });
-}
-
-function pintarPie() {
-  const mod = esMac ? '⌘' : 'Ctrl+';
-  const ayudas = el('div', { class: 'pie-ayudas' },
-    tecla('↵'), ` ${t('pie.pegar')}`, el('span', { class: 'punto', text: '·' }),
-    tecla(`${mod}P`), ` ${t('pie.fijar')}`, el('span', { class: 'punto', text: '·' }),
-    tecla('Tab'), ` ${t('pie.herramientas')}`, el('span', { class: 'punto', text: '·' }),
-    tecla('Esc'), ` ${t('pie.cerrar')}`,
+      class: 'boton-icono',
+      attrs: { title: t('panel.volver'), 'aria-label': t('panel.volver') },
+      on: { click: cerrarPanel },
+    }, icono('volver')),
+    el('span', { class: 'barra-panel-titulo', text: titulo }),
   );
-  const atajo = atajoLegible(estado.ajustes.atajo, { mac: esMac, idioma: idiomaActual() });
-  const estadoPro = el('span', {
-    class: ['chip', estado.pro ? 'chip-pro' : 'chip-gratis'],
-    text: t(estado.pro ? 'comun.pro' : 'comun.gratis'),
-  });
-  const derecha = el('div', { class: 'pie-derecha' },
-    el('span', { class: 'pie-atajo', attrs: { title: t('pie.atajoTitulo') } }, tecla(atajo)),
-    estadoPro,
-  );
-  poner(nodos.pie, ayudas, derecha);
 }
 
-function pintarMarco() {
-  nodos.buscador.placeholder = t('buscador.placeholder');
-  nodos.buscador.setAttribute('aria-label', t('buscador.etiqueta'));
-  poner(nodos.iconoBuscar, icono('buscar'));
-  pintarPestanas();
+// Posición del control enfocado dentro del panel (-1 si el foco está fuera).
+function indiceFoco() {
+  return panel ? [...panel.querySelectorAll('.navegable:not([disabled])')].indexOf(document.activeElement) : -1;
+}
+
+// Repinta el panel conservando el control que tenía el foco (por posición).
+function pintarPanel({ enfocar = false, foco = indiceFoco() } = {}) {
+  if (!panel) {
+    return;
+  }
+  const elemento = elementoActual();
+  const contenido = vistaActual().detalle(elemento);
+  if (!contenido) {
+    cerrarPanel();
+    return;
+  }
+  poner(panel, barraPanel(elemento), el('div', { class: 'panel-cuerpo' }, contenido));
+  const navegables = [...panel.querySelectorAll('.navegable:not([disabled])')];
+  const destino = foco >= 0 ? navegables[Math.min(foco, navegables.length - 1)] : (enfocar && primerNavegable(panel));
+  destino?.focus();
+}
+
+function abrirPanel() {
+  if (!panel) {
+    return;
+  }
+  estado.panel = true;
+  pintarModo();
+  pintarPanel({ enfocar: true });
+  panel.querySelector('.panel-cuerpo')?.scrollTo(0, 0);
+}
+
+function cerrarPanel() {
+  if (!estado.panel) {
+    return;
+  }
+  estado.panel = false;
+  vistaActual().alCerrarPanel?.();
+  if (panel) {
+    limpiar(panel);
+  }
+  pintarModo();
+  marcarSeleccion();
+  enfocarBuscador();
+  if (historialPendiente) {
+    historialPendiente = false;
+    recargar({ mantener: true });
+  }
+}
+
+function pintarModo() {
+  nodos.contenido.classList.toggle('con-panel', estado.panel);
   pintarPie();
-}
-
-function enfocarBuscador() {
-  nodos.buscador.focus();
-  const final = nodos.buscador.value.length;
-  nodos.buscador.setSelectionRange(final, final);
 }
 
 function cambiarPestana(id) {
   if (!VISTAS[id]) {
     return;
   }
-  if (id !== estado.pestana) {
+  if (id !== estado.pestana || estado.panel) {
+    if (estado.panel) {
+      vistaActual().alCerrarPanel?.();
+    }
     estado.pestana = id;
     estado.indice = 0;
+    estado.panel = false;
     pintarPestanas();
     recargar();
   }
@@ -263,15 +253,23 @@ function cambiarPestana(id) {
 }
 
 function entrarPanel() {
-  const contenedor = detalle ?? nodos.contenido.querySelector('.pantalla');
-  const primero = contenedor && primerNavegable(contenedor);
-  if (primero) {
-    primero.focus();
-    primero.scrollIntoView({ block: 'nearest' });
+  if (estado.panel) {
+    primerNavegable(panel)?.focus();
+    return;
   }
+  const pantalla = nodos.contenido.querySelector('.pantalla');
+  if (pantalla) {
+    primerNavegable(pantalla)?.focus();
+    return;
+  }
+  abrirPanel();
 }
 
 function escape() {
+  if (estado.panel) {
+    cerrarPanel();
+    return;
+  }
   if (nodos.buscador.value) {
     nodos.buscador.value = '';
     estado.consulta = '';
@@ -281,21 +279,34 @@ function escape() {
   intentar(() => api.ventanaOcultar());
 }
 
+// Esc o ← desde el panel o un campo: vuelve a la lista.
+function volver() {
+  if (estado.panel) {
+    cerrarPanel();
+  } else {
+    enfocarBuscador();
+  }
+}
+
 function alEscribir() {
   estado.consulta = nodos.buscador.value;
+  if (estado.panel) {
+    vistaActual().alCerrarPanel?.();
+    estado.panel = false;
+  }
   recargar();
 }
 
-// --- Datos de entorno y eventos
+// --- Datos de entorno y eventos de Rust
 
 async function refrescarEntorno() {
-  const [licencia, ajustes] = await Promise.all([
-    intentar(() => api.licenciaEstado()),
+  const [ajustes, video] = await Promise.all([
     intentar(() => api.ajustesLeer()),
+    intentar(() => api.videoEstado()),
   ]);
-  estado.licencia = licencia ?? { pro: false };
-  estado.pro = Boolean(estado.licencia.pro);
   estado.ajustes = { ...estado.ajustes, ...(ajustes ?? {}) };
+  estado.ajustes.atajos = completarAtajos(estado.ajustes.atajos);
+  estado.video = { grabando: false, segundos: 0, ...(video ?? {}) };
   setIdioma(estado.ajustes.idioma);
   aplicarTema(estado.ajustes.tema);
   pintarMarco();
@@ -306,48 +317,77 @@ async function alMostrarPopup() {
   estado.consulta = '';
   estado.pestana = 'historial';
   estado.indice = 0;
+  estado.panel = false;
   await refrescarEntorno();
-  await Promise.all([cargarFragmentos(), cargarAcciones()]);
+  await cargarFragmentos();
   await recargar();
   enfocarBuscador();
 }
 
 function alCambiarHistorial() {
-  if (estado.pestana === 'historial') {
+  if (estado.pestana !== 'historial') {
+    return;
+  }
+  // Con el panel abierto no se repinta (perdería el foco); se recarga al volver.
+  if (estado.panel) {
+    historialPendiente = true;
+    return;
+  }
+  recargar({ mantener: true });
+}
+
+function alEstadoVideo({ payload }) {
+  estado.video = { grabando: Boolean(payload?.grabando), segundos: Number(payload?.segundos) || 0 };
+  pintarPie();
+  if (estado.pestana === 'capturas') {
+    vistaCapturas.actualizarVideo();
+  }
+}
+
+function alTerminarVideo(texto, tipo) {
+  aviso(texto, tipo);
+  if (estado.pestana === 'capturas' && !estado.panel) {
     recargar({ mantener: true });
   }
 }
 
 function conectarEventos() {
   nodos.buscador.addEventListener('input', alEscribir);
+  hacerArrastrable(nodos.cabecera);
+  hacerArrastrable(nodos.pie);
   document.addEventListener('keydown', crearTeclado({
     mover: paso => seleccionar(estado.indice + paso),
     activar,
     entrarPanel,
     escape,
+    volver,
     cambiarPestana,
-    enfocarBuscador,
     abrirAjustes,
     teclasVista: evento => vistaActual().teclas?.(evento, elementoActual()),
   }));
   intentar(() => api.alEvento('historial-cambiado', alCambiarHistorial));
   intentar(() => api.alEvento('popup-mostrado', alMostrarPopup));
+  intentar(() => api.alEvento('video-estado', alEstadoVideo));
+  intentar(() => api.alEvento('video-guardado', ({ payload }) => alTerminarVideo(t('capturas.videoGuardado', { ruta: payload?.ruta ?? '' }), 'ok')));
+  intentar(() => api.alEvento('video-error', ({ payload }) => alTerminarVideo(payload?.mensaje || t('error.generico'), 'error')));
 }
 
 Object.assign(ui, {
   recargar,
   repintar: pintar,
-  repintarDetalle: pintarDetalle,
+  repintarDetalle: () => (estado.panel ? pintarPanel() : undefined),
   enfocarBuscador,
   cambiarPestana,
   seleccionar,
+  abrirPanel,
+  cerrarPanel,
 });
 
 async function iniciar() {
   pintarMarco();
   conectarEventos();
   await refrescarEntorno();
-  await Promise.all([cargarFragmentos(), cargarAcciones()]);
+  await cargarFragmentos();
   await recargar();
   enfocarBuscador();
 }

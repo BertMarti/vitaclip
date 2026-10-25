@@ -1,8 +1,10 @@
-// Piezas compartidas por el popup y los ajustes: avisos, errores, tema y botones.
+// Piezas compartidas por todas las ventanas: avisos, errores, tema, botones, atajos legibles y arrastre.
 
+import * as api from './api.js';
 import { el } from './dom.js';
-import { t, existe } from './i18n.js';
+import { t, existe, idiomaActual } from './i18n.js';
 import { icono } from './iconos.js';
+import { atajoLegible } from './atajos.js';
 
 const DURACION_AVISO = 2600;
 
@@ -10,6 +12,24 @@ export const esMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? ''
 
 // Tecla Ctrl o ⌘ según el sistema, para los textos de ayuda.
 export const teclaMod = esMac ? '⌘' : 'Ctrl+';
+
+// Atajo de Tauri en texto legible para este sistema e idioma ("" si está desactivado).
+export function legible(atajo) {
+  return atajoLegible(atajo, { mac: esMac, idioma: idiomaActual() });
+}
+
+const INTERACTIVOS = 'input, textarea, select, button, a, label, [role="tab"], .no-arrastrar';
+
+// Al pulsar en una zona vacía de `zona` (no en controles) se mueve la ventana sin bordes.
+export function hacerArrastrable(zona) {
+  zona.addEventListener('mousedown', evento => {
+    if (evento.button !== 0 || evento.target.closest(INTERACTIVOS)) {
+      return;
+    }
+    evento.preventDefault();
+    intentar(() => api.arrastrarVentana());
+  });
+}
 
 let contenedorAvisos = null;
 
@@ -22,11 +42,11 @@ function zonaAvisos() {
 }
 
 // Aviso efímero (toast). tipo: "info" | "ok" | "error".
-export function aviso(texto, tipo = 'info') {
+export function aviso(texto, tipo = 'info', duracion = null) {
   const nodo = el('div', { class: ['aviso', `aviso-${tipo}`], text: texto });
   zonaAvisos().append(nodo);
-  const duracion = tipo === 'error' ? DURACION_AVISO * 2 : DURACION_AVISO;
-  setTimeout(() => nodo.remove(), duracion);
+  const espera = duracion ?? (tipo === 'error' ? DURACION_AVISO * 2 : DURACION_AVISO);
+  setTimeout(() => nodo.remove(), espera);
 }
 
 // Los errores de Tauri llegan como cadena; los de las herramientas, como Error con clave de i18n.
@@ -82,21 +102,6 @@ export function boton(etiqueta, accion, { clase = '', icono: nombreIcono = null,
     attrs: { title: titulo },
     on: { click: accion },
   }, nombreIcono && icono(nombreIcono), el('span', { text: etiqueta }));
-}
-
-// Tarjeta para funciones Pro sin licencia: qué ofrece y botón «Ver Pro».
-export function tarjetaPro(claveTitulo, clavesPuntos, alVerPro) {
-  const puntos = clavesPuntos.map(clave => el('li', {}, icono('check'), el('span', { text: t(clave) })));
-  return el('div', { class: 'tarjeta-pro' },
-    el('div', { class: 'tarjeta-pro-cabecera' },
-      icono('candado'),
-      el('strong', { text: t(claveTitulo) }),
-      el('span', { class: 'chip chip-pro', text: t('comun.pro') }),
-    ),
-    el('p', { class: 'suave', text: t('pro.explicacion') }),
-    el('ul', { class: 'lista-pro' }, puntos),
-    alVerPro && boton(t('pro.ver'), alVerPro, { clase: 'boton-primario' }),
-  );
 }
 
 // Ejecuta una promesa y enseña el error en un aviso (nunca se traga errores).

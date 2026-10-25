@@ -1,0 +1,182 @@
+/* Popup: IA, editores (fragmentos y bóveda), pantallas completas y mini formulario de campos. */
+
+/* IA */
+
+.ia-libre {
+  display: flex;
+  gap: 6px;
+}
+
+.ia-libre .campo {
+  height: 28px;
+  font-size: 12.5px;
+}
+
+.ia-cargando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.girando {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 2px solid var(--borde-fuerte);
+  border-top-color: var(--acento);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+.ia-resultado {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio);
+  background: var(--acento-suave);
+}
+
+.ia-resultado-cabecera {
+  color: var(--acento-texto);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ia-resultado pre {
+  max-height: 140px;
+  margin: 0;
+  overflow: auto;
+  font-family: var(--fuente);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* Editores (fragmentos y bóveda) */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.editor h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editor h3 .icono {
+  color: var(--acento-texto);
+}
+
+.secreto-oculto {
+  margin: 0;
+  color: var(--texto-suave);
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.15em;
+}
+
+/* Pantalla completa (bóveda sin crear o bloqueada) */
+
+.pantalla {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.tarjeta-centrada {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, 100%);
+}
+
+.tarjeta-centrada h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tarjeta-centrada p {
+  margin: 0;
+}
+
+.tarjeta-icono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+}
+
+.tarjeta-icono .icono {
+  width: 20px;
+  height: 20px;
+}
+
+.nota-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.nota-aviso .icono {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--aviso);
+}
+
+/* Mini formulario de campos */
+
+.capa-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 8, 0.32);
+}
+
+.dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, 90vw);
+  padding: 16px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  animation: aparecer 120ms ease-out;
+}
+
+.dialogo h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.dialogo p {
+  margin: 0;
+  font-size: 12px;
+}

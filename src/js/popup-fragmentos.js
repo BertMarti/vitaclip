@@ -1,5 +1,5 @@
-// Pestaña Fragmentos: lista, editor (nombre, abreviatura, contenido con variables) y pegado expandido.
-// Los {campo:...} (Pro) se piden en un mini formulario antes de pegar.
+// Pestaña Fragmentos: lista, editor en el panel (nombre, abreviatura, contenido con variables) y pegado expandido.
+// Los {campo:...} se piden en un mini formulario antes de pegar.
 
 import * as api from './api.js';
 import { el } from './dom.js';
@@ -8,7 +8,7 @@ import { icono } from './iconos.js';
 import { aviso, boton, botonConfirmar, intentar } from './comun.js';
 import { resaltar, vistaPrevia, coincide } from './herramientas/buscar.js';
 import { expandir, campos, rellenar, VARIABLES } from './herramientas/variables.js';
-import { estado, ui, pegarTexto, ultimoTexto, cargarFragmentos, abrirAjustes } from './popup-estado.js';
+import { estado, ui, pegarTexto, ultimoTexto, cargarFragmentos } from './popup-estado.js';
 
 // Fragmento nuevo aún sin guardar (id 0 = nuevo para Rust).
 let borrador = null;
@@ -45,7 +45,7 @@ function campoDeFormulario(campo, indice) {
   return el('label', { class: 'etiqueta', attrs: { for: `campo-${indice}` } }, el('span', { text: campo.nombre }), entrada);
 }
 
-// Mini formulario (Pro) para rellenar {campo:...}.
+// Mini formulario para rellenar {campo:...}.
 function pedirCampos(fragmento, lista) {
   const capa = el('div', { class: 'capa-modal' });
   const formulario = el('form', { class: 'dialogo', attrs: { role: 'dialog', 'aria-modal': 'true' } },
@@ -77,10 +77,6 @@ function pedirCampos(fragmento, lista) {
 
 export async function pegarFragmento(fragmento) {
   const lista = campos(fragmento.contenido);
-  if (lista.length && !estado.pro) {
-    aviso(t('fragmentos.camposPro'), 'error');
-    return;
-  }
   if (lista.length) {
     pedirCampos(fragmento, lista);
     return;
@@ -122,7 +118,7 @@ function fila(fragmento, indice) {
 
 function nuevo() {
   borrador = fragmentoVacio();
-  ui.repintarDetalle();
+  ui.abrirPanel();
   document.querySelector('.editor input[name="nombre"]')?.focus();
 }
 
@@ -134,9 +130,13 @@ function cabeceraLista() {
 }
 
 function vacio() {
+  if (estado.consulta) {
+    return el('div', { class: 'vacio' }, icono('fragmento'), el('p', { text: t('lista.sinResultados') }));
+  }
   return el('div', { class: 'vacio' },
     icono('fragmento'),
-    el('p', { text: t(estado.consulta ? 'lista.sinResultados' : 'fragmentos.vacio') }),
+    el('p', { text: t('fragmentos.explicacion') }),
+    boton(t('fragmentos.nuevo'), nuevo, { icono: 'mas', clase: 'boton-primario' }),
   );
 }
 
@@ -153,13 +153,13 @@ function chipVariable(nombre, area) {
 }
 
 function chipCampo(area) {
-  const bloqueado = !estado.pro;
   return el('button', {
     type: 'button',
-    class: ['chip', 'chip-variable', bloqueado && 'chip-bloqueado'],
-    attrs: { title: t(bloqueado ? 'fragmentos.camposPro' : 'variables.campo') },
-    on: { click: () => (bloqueado ? abrirAjustes() : insertar(area, `{campo:${t('fragmentos.campoEjemplo')}}`)) },
-  }, bloqueado && icono('candado'), '{campo:…}');
+    class: 'chip chip-variable',
+    text: '{campo:…}',
+    attrs: { title: t('variables.campo') },
+    on: { click: () => insertar(area, `{campo:${t('fragmentos.campoEjemplo')}}`) },
+  });
 }
 
 function insertar(area, texto) {
@@ -205,21 +205,12 @@ async function guardar(formulario, original) {
 }
 
 async function borrar(fragmento) {
-  if (!fragmento.id) {
-    borrador = null;
-    ui.repintarDetalle();
-    return;
+  borrador = null;
+  if (fragmento.id) {
+    await intentar(() => api.fragmentoBorrar(fragmento.id));
   }
-  await intentar(() => api.fragmentoBorrar(fragmento.id));
+  ui.cerrarPanel();
   await ui.recargar({ mantener: false });
-}
-
-function avisoCampos(contenido) {
-  const tieneCampos = campos(contenido).length > 0;
-  return el('p', { class: ['linea-bloqueada', (!tieneCampos || estado.pro) && 'oculto'] },
-    icono('candado'),
-    el('span', { text: t('fragmentos.camposPro') }),
-  );
 }
 
 function campoTexto(nombre, valor, extra = {}) {
@@ -231,12 +222,7 @@ function campoTexto(nombre, valor, extra = {}) {
 
 function editor(fragmento) {
   const area = el('textarea', { class: 'campo', name: 'contenido', rows: 5, value: fragmento.contenido, spellcheck: false });
-  const avisoPro = avisoCampos(fragmento.contenido);
-  area.addEventListener('input', () => {
-    avisoPro.classList.toggle('oculto', estado.pro || !campos(area.value).length);
-  });
   const formulario = el('form', { class: 'editor' },
-    el('h3', { text: t(fragmento.id ? 'fragmentos.editar' : 'fragmentos.nuevoTitulo') }),
     campoTexto('nombre', fragmento.nombre),
     el('label', { class: 'etiqueta' },
       el('span', { text: t('fragmentos.abreviatura') }),
@@ -247,7 +233,6 @@ function editor(fragmento) {
     ),
     el('label', { class: 'etiqueta' }, el('span', { text: t('fragmentos.contenido') }), area),
     el('div', { class: 'chips' }, VARIABLES.map(nombre => chipVariable(nombre, area)), chipCampo(area)),
-    avisoPro,
     el('div', { class: 'botonera' },
       boton(t('detalle.pegar'), () => pegarFragmento(leerFormulario(formulario, fragmento)), { clase: 'boton-primario navegable' }),
       el('button', { type: 'submit', class: 'boton navegable', text: t('comun.guardar') }),
@@ -270,7 +255,6 @@ export function detalleFragmentoBreve(fragmento) {
     ),
     el('h3', { text: fragmento.nombre }),
     el('pre', { class: 'contenido-clip', text: fragmento.contenido }),
-    avisoCampos(fragmento.contenido),
     el('div', { class: 'botonera' },
       boton(t('detalle.pegar'), () => pegarFragmento(fragmento), { clase: 'boton-primario navegable', titulo: '↵' }),
       boton(t('fragmentos.irEditar'), () => ui.cambiarPestana('fragmentos'), { clase: 'navegable' }),
@@ -282,13 +266,11 @@ function detalle(fragmento) {
   if (borrador) {
     return editor(borrador);
   }
-  if (!fragmento) {
-    return el('div', { class: 'detalle-vacio' },
-      el('p', { text: t('fragmentos.explicacion') }),
-      boton(t('fragmentos.nuevo'), nuevo, { icono: 'mas', clase: 'boton-primario navegable' }),
-    );
-  }
-  return editor(fragmento);
+  return fragmento ? editor(fragmento) : null;
+}
+
+function tituloPanel(fragmento) {
+  return t(borrador || !fragmento ? 'fragmentos.nuevoTitulo' : 'fragmentos.editar');
 }
 
 function teclas(evento) {
@@ -308,6 +290,10 @@ export const vistaFragmentos = {
   alSeleccionar: () => {
     borrador = null;
   },
+  alCerrarPanel: () => {
+    borrador = null;
+  },
+  tituloPanel,
   cabeceraLista,
   vacio,
   teclas,

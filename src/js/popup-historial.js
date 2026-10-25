@@ -1,4 +1,5 @@
 // Pestaña Historial: lista de clips con cálculo y fragmentos por abreviatura como primeras filas.
+// Enter pega, Ctrl+P fija, Supr borra y →/Tab abre el panel de detalle.
 
 import * as api from './api.js';
 import { el } from './dom.js';
@@ -101,7 +102,7 @@ function numero(indice) {
 }
 
 function textoResaltado(texto) {
-  return resaltar(vistaPrevia(texto, 140), estado.consulta).map(parte => (
+  return resaltar(vistaPrevia(texto, 120), estado.consulta).map(parte => (
     parte.marcado ? el('mark', { text: parte.texto }) : parte.texto
   ));
 }
@@ -190,32 +191,27 @@ function detalle(elemento) {
   return detalleClip(elemento);
 }
 
-function alSeleccionar(elemento) {
-  if (esClip(elemento)) {
-    estado.clipActual = elemento;
+// Los grupos solo se ven si hay fijados (si no, sobra la etiqueta «Recientes»).
+function grupo(elemento) {
+  if (estado.consulta || !esClip(elemento) || !estado.elementos.some(otro => esClip(otro) && otro.fijado)) {
+    return null;
   }
+  return elemento.fijado ? t('grupo.fijados') : t('grupo.recientes');
 }
 
-function grupo(elemento) {
-  if (!estado.consulta && esClip(elemento)) {
-    return elemento.fijado ? t('grupo.fijados') : t('grupo.recientes');
-  }
-  return null;
+function tituloPanel(elemento) {
+  if (elemento?.tipo === 'calculo') return t('calculo.titulo');
+  if (elemento?.tipo === 'fragmento') return t('fragmentos.uno');
+  return t(elemento?.tipo === 'imagen' ? 'clip.tipoImagen' : 'clip.tipoTexto');
 }
 
 export const vistaHistorial = {
-  cargar: async consulta => {
-    const elementos = await cargar(consulta);
-    alSeleccionar(elementos.find(esClip));
-    return elementos;
-  },
+  cargar,
   clave: elemento => elemento.id,
   fila,
-  detalle: elemento => {
-    alSeleccionar(elemento);
-    return detalle(elemento);
-  },
+  detalle,
   activar,
   teclas,
   grupo,
+  tituloPanel,
 };

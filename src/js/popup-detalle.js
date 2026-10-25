@@ -1,17 +1,16 @@
-// Panel de detalle de un clip: contenido, color, contadores, botones, QR,
-// transformaciones, acciones personalizadas (Pro) e IA (Pro).
-// Los botones con clase .navegable se recorren con Tab/↑/↓ y se activan con Enter.
+// Panel de detalle de un clip: contenido, color, contadores, botones, QR, transformaciones e IA.
+// Sustituye a la lista mientras está abierto. Los botones con clase .navegable se recorren
+// con Tab/↑/↓ y se activan con Enter.
 
 import * as api from './api.js';
 import { el, poner } from './dom.js';
 import { t, idiomaActual } from './i18n.js';
 import { icono } from './iconos.js';
-import { boton, mensajeError, mostrarError } from './comun.js';
+import { boton, mensajeError } from './comun.js';
 import { haceCuanto, vistaPrevia } from './herramientas/buscar.js';
 import { TRANSFORMACIONES, transformar, contar } from './herramientas/transformar.js';
 import { detectar, aHex, aRgb, aHsl } from './herramientas/color.js';
-import { aplicarAccion } from './herramientas/acciones.js';
-import { estado, ui, pegarTexto, pegarClip, fijarClip, borrarClip } from './popup-estado.js';
+import { ui, pegarTexto, pegarClip, fijarClip, borrarClip } from './popup-estado.js';
 import { seccionIa } from './popup-ia.js';
 
 const MAX_QR = 1500;
@@ -42,10 +41,7 @@ function svgADataUrl(svg) {
 // --- Partes del panel
 
 function cabecera(clip) {
-  const partes = [
-    t(clip.tipo === 'imagen' ? 'clip.tipoImagen' : 'clip.tipoTexto'),
-    haceCuanto(clip.creado, Date.now(), idiomaActual()),
-  ];
+  const partes = [haceCuanto(clip.creado, Date.now(), idiomaActual())];
   if (clip.usos) {
     partes.push(t('clip.usos', { n: clip.usos }));
   }
@@ -104,13 +100,14 @@ function botonera(clip) {
   const largo = clip.tipo !== 'texto' || Array.from(clip.texto).length > MAX_QR;
   const botonQr = boton(t('detalle.qr'), () => alternarQr(clip), {
     titulo: largo ? t('qr.demasiadoLargo') : t('qr.titulo'),
+    navegable: true,
   });
   botonQr.disabled = largo;
   return el('div', { class: 'botonera' },
-    boton(t('detalle.pegar'), () => pegarClip(clip), { clase: 'boton-primario', titulo: '↵' }),
-    boton(t(clip.fijado ? 'detalle.soltar' : 'detalle.fijar'), () => fijarClip(clip), { icono: 'fijado' }),
-    boton(t('detalle.borrar'), () => borrarClip(clip), { clase: 'boton-peligro' }),
-    botonQr,
+    boton(t('detalle.pegar'), () => pegarClip(clip), { clase: 'boton-primario', titulo: '↵', navegable: true }),
+    boton(t(clip.fijado ? 'detalle.soltar' : 'detalle.fijar'), () => fijarClip(clip), { icono: 'fijado', navegable: true }),
+    boton(t('detalle.borrar'), () => borrarClip(clip), { clase: 'boton-peligro', navegable: true }),
+    clip.tipo === 'texto' && botonQr,
   );
 }
 
@@ -152,37 +149,6 @@ function seccionTransformaciones(texto) {
   );
 }
 
-// --- Acciones personalizadas
-
-function lineaBloqueada(claveTexto) {
-  return el('p', { class: 'linea-bloqueada' }, icono('candado'), el('span', { text: t(claveTexto) }));
-}
-
-function ejecutarAccion(accion, texto) {
-  try {
-    pegarTexto(aplicarAccion(accion, texto));
-  } catch (error) {
-    mostrarError(error);
-  }
-}
-
-function seccionAcciones(texto) {
-  const titulo = el('h3', {}, t('detalle.acciones'), !estado.pro && el('span', { class: 'chip chip-pro', text: t('comun.pro') }));
-  if (!estado.pro) {
-    return el('section', { class: 'seccion' }, titulo, lineaBloqueada('acciones.bloqueadas'));
-  }
-  if (!estado.acciones.length) {
-    const ir = boton(t('acciones.crear'), () => ui.cambiarPestana('herramientas'), { clase: 'boton-enlace navegable' });
-    return el('section', { class: 'seccion' }, titulo, el('p', { class: 'suave' }, t('acciones.ninguna'), ' ', ir));
-  }
-  const botones = estado.acciones.map(accion => el('button', {
-    type: 'button',
-    class: 'boton-herramienta navegable',
-    on: { click: () => ejecutarAccion(accion, texto) },
-  }, icono('rayo'), el('span', { text: accion.nombre })));
-  return el('section', { class: 'seccion' }, titulo, el('div', { class: 'rejilla-herramientas' }, botones));
-}
-
 // --- Paneles completos
 
 export function detalleClip(clip) {
@@ -201,7 +167,6 @@ export function detalleClip(clip) {
     qrAbiertoDe === clip.id && zonaQr(clip),
     color && bloqueColor(color),
     seccionTransformaciones(clip.texto),
-    seccionAcciones(clip.texto),
     seccionIa(clip),
   );
 }
@@ -211,7 +176,6 @@ export function detalleCalculo(calculo) {
     ? el('p', { class: 'resultado-grande error-texto', text: t(`error.${calculo.error}`) })
     : el('p', { class: 'resultado-grande', text: calculo.resultado });
   return el('div', { class: 'detalle-clip' },
-    el('div', { class: 'detalle-meta' }, el('span', { text: t('calculo.titulo') })),
     el('p', { class: 'expresion', text: calculo.expresion }),
     resultado,
     !calculo.error && el('div', { class: 'botonera' },

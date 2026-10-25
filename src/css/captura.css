@@ -1,0 +1,296 @@
+/* Editor de capturas tipo Lightshot: lienzo a pantalla completa, barra compacta y etiqueta de tamaño. */
+
+body.pagina-captura {
+  overflow: hidden;
+  background: #000000;
+  user-select: none;
+}
+
+.lienzo {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.capa {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.capa > * {
+  pointer-events: auto;
+}
+
+body.ocupado,
+body.ocupado .lienzo {
+  cursor: progress;
+}
+
+/* Etiqueta «ancho × alto» en píxeles físicos */
+.etiqueta-tamano {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(10, 12, 8, 0.82);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.capa > .etiqueta-tamano {
+  pointer-events: none;
+}
+
+/* Barra de herramientas */
+.barra-captura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--texto);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: default;
+  /* Solo opacidad: el transform lo pone JS para colocarla junto a la selección. */
+  animation: aparecer-barra 90ms ease-out;
+}
+
+.grupo-barra {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.separador {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--borde);
+}
+
+.herramienta,
+.grosor {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto);
+  cursor: pointer;
+  transition: background-color 80ms ease;
+}
+
+.grosor {
+  width: 26px;
+}
+
+.herramienta .icono {
+  width: 17px;
+  height: 17px;
+}
+
+.herramienta:hover,
+.grosor:hover,
+.accion-barra:hover {
+  background: var(--superficie-2);
+}
+
+.herramienta.activa,
+.grosor.activa {
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  box-shadow: inset 0 0 0 1px var(--acento);
+}
+
+.herramienta.principal,
+.accion-barra.principal {
+  background: var(--acento);
+  color: var(--sobre-acento);
+}
+
+.herramienta.principal:hover,
+.accion-barra.principal:hover {
+  background: var(--acento-fuerte);
+}
+
+.herramienta:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.herramienta:disabled:hover {
+  background: transparent;
+}
+
+.color {
+  width: 20px;
+  height: 20px;
+  margin: 0 2px;
+  padding: 0;
+  border: 2px solid var(--superficie);
+  border-radius: 50%;
+  background: var(--muestra);
+  box-shadow: 0 0 0 1px var(--borde-fuerte);
+  cursor: pointer;
+}
+
+.color.activa {
+  box-shadow: 0 0 0 2px var(--acento);
+}
+
+.grosor-punto {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.grosor-0 .grosor-punto {
+  width: 4px;
+  height: 4px;
+}
+
+.grosor-1 .grosor-punto {
+  width: 7px;
+  height: 7px;
+}
+
+.grosor-2 .grosor-punto {
+  width: 11px;
+  height: 11px;
+}
+
+.accion-barra {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.accion-barra .icono {
+  width: 16px;
+  height: 16px;
+}
+
+.accion-barra kbd {
+  height: 17px;
+  font-size: 10px;
+}
+
+.accion-barra.principal kbd {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.45);
+  color: inherit;
+}
+
+.herramienta:focus-visible,
+.grosor:focus-visible,
+.color:focus-visible,
+.accion-barra:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+@keyframes aparecer-barra {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Ayuda inicial centrada */
+.ayuda-captura {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(10, 12, 8, 0.8);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+}
+
+.capa > .ayuda-captura {
+  pointer-events: none;
+}
+
+.ayuda-botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.ayuda-captura .accion-barra {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.ayuda-captura .accion-barra kbd {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.ayuda-captura .accion-barra.principal {
+  background: var(--acento);
+  color: var(--sobre-acento);
+}
+
+/* Texto temporal (Enter fija) */
+.texto-captura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 2ch;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 1;
+  outline: 1px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: 3px;
+  caret-color: currentColor;
+}
+
+.pagina-captura .avisos {
+  bottom: 24px;
+}

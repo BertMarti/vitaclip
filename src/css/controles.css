@@ -1,0 +1,302 @@
+/* Controles comunes: botones, campos, interruptor, chips y selector segmentado. */
+
+/* ---------- Botones ---------- */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+.boton .icono {
+  width: 14px;
+  height: 14px;
+}
+
+.boton:hover {
+  background: var(--superficie-2);
+  border-color: var(--borde-fuerte);
+}
+
+.boton:focus-visible,
+.segmento:focus-visible,
+.nav-boton:focus-visible,
+.pestana:focus-visible,
+.grabador:focus-visible,
+.chip-variable:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.boton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boton-primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--sobre-acento);
+  font-weight: 600;
+}
+
+.boton-primario:hover {
+  background: var(--acento-fuerte);
+  border-color: var(--acento-fuerte);
+}
+
+.boton-peligro {
+  color: var(--peligro);
+}
+
+.boton-peligro:hover {
+  background: var(--peligro-suave);
+  border-color: var(--peligro);
+}
+
+.boton-peligro.armado {
+  background: var(--peligro);
+  border-color: var(--peligro);
+  color: #ffffff;
+}
+
+.boton-pequeno {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.boton-ancho {
+  width: 100%;
+}
+
+.boton-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--texto-suave);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.boton-icono:hover {
+  background: var(--superficie-3);
+  color: var(--texto);
+}
+
+.boton-icono:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.botonera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- Campos ---------- */
+
+.campo {
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 100ms ease, box-shadow 100ms ease;
+}
+
+.campo:focus {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px var(--foco);
+}
+
+.campo:disabled {
+  opacity: 0.6;
+}
+
+.campo::placeholder {
+  color: var(--texto-suave);
+  opacity: 0.8;
+}
+
+textarea.campo {
+  height: auto;
+  min-height: 84px;
+  padding: 7px 9px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+select.campo {
+  padding-right: 6px;
+  cursor: pointer;
+}
+
+.campo-mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.campo-numero {
+  width: 88px;
+}
+
+.etiqueta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.etiqueta > span:first-child {
+  color: var(--texto-suave);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.campo-prefijo {
+  display: flex;
+}
+
+.campo-prefijo .prefijo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  border: 1px solid var(--borde);
+  border-right: 0;
+  border-radius: 7px 0 0 7px;
+  background: var(--superficie-2);
+  color: var(--texto-suave);
+  font-family: var(--mono);
+}
+
+.campo-prefijo .campo {
+  border-radius: 0 7px 7px 0;
+}
+
+/* Interruptor: el propio checkbox dibujado como switch */
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.interruptor input {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  border-radius: 999px;
+  background: var(--borde-fuerte);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: background-color 100ms ease;
+}
+
+.interruptor input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 100ms ease;
+}
+
+.interruptor input:checked {
+  background: var(--acento);
+}
+
+.interruptor input:checked::before {
+  transform: translateX(14px);
+}
+
+.interruptor input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* ---------- Chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  flex: none;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.chip .icono {
+  width: 11px;
+  height: 11px;
+}
+
+.chip-abreviatura {
+  border-color: transparent;
+  background: var(--acento-suave);
+  color: var(--acento-texto);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.chip-fijado {
+  color: var(--acento-texto);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip-variable {
+  height: 22px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chip-variable:hover {
+  border-color: var(--acento);
+  color: var(--texto);
+}
+
