@@ -15,6 +15,8 @@ const TIPOS_SECRETOS: &[&str] = &[
     "Clipboard Viewer Ignore",
 ];
 
+// En Windows se pregunta por cada formato directamente; esta comparación la usan Linux, macOS y las pruebas.
+#[cfg_attr(windows, allow(dead_code))]
 pub fn es_tipo_secreto(tipo: &str) -> bool {
     TIPOS_SECRETOS.iter().any(|t| t.eq_ignore_ascii_case(tipo))
 }

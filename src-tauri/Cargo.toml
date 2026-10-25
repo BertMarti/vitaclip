@@ -29,7 +29,6 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 base64 = "0.22"
 sha2 = "0.10"
-ed25519-dalek = "2"
 argon2 = "0.5"
 chacha20poly1305 = "0.10"
 rand = "0.8"
