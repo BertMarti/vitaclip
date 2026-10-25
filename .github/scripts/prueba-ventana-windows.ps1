@@ -9,6 +9,8 @@ using System.Text;
 public static class W {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, uint d, UIntPtr e);
@@ -30,6 +32,13 @@ public static class W {
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
 function Rect($h) { $r = New-Object W+RECT; [W]::GetWindowRect($h, [ref]$r) | Out-Null; return $r }
+# Área útil (sin los bordes invisibles que Windows añade a GetWindowRect), en coordenadas de pantalla.
+function Cliente($h) {
+  $c = New-Object W+RECT; [W]::GetClientRect($h, [ref]$c) | Out-Null
+  $p = New-Object W+POINT; $p.X = 0; $p.Y = 0; [W]::ClientToScreen($h, [ref]$p) | Out-Null
+  $r = New-Object W+RECT; $r.L = $p.X; $r.T = $p.Y; $r.R = $p.X + $c.R; $r.B = $p.Y + $c.B
+  return $r
+}
 function Texto($r) { "x=$($r.L) y=$($r.T) ancho=$($r.R - $r.L) alto=$($r.B - $r.T)" }
 function Captura($nombre) {
   $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
@@ -69,8 +78,8 @@ Start-Process -FilePath $Exe -ArgumentList "--mostrar" | Out-Null
 Start-Sleep -Seconds 3
 $popup = [W]::Buscar("Vitaclip")
 if (-not [W]::IsWindowVisible($popup)) { throw "El popup no se ve" }
-$antes = Rect $popup
-Write-Host "Popup al abrir: $(Texto $antes)"
+$antes = Cliente $popup
+Write-Host "Popup al abrir: $(Texto $antes) (con bordes invisibles: $(Texto (Rect $popup)))"
 Captura "ventana-1-abierta"
 
 # 1) MOVER: arrastrar desde el pie (zona de la pista, a la izquierda), 200 px a la derecha y 60 abajo.
@@ -78,7 +87,7 @@ Captura "ventana-1-abierta"
 $px = $antes.L + 30; $py = $antes.B - 10
 Write-Host "Bajo el ratón en el pie ($px,$py): $(Quien $px $py)"
 Arrastrar $px $py 200 60
-$movida = Rect $popup
+$movida = Cliente $popup
 Write-Host "Tras arrastrar el pie: $(Texto $movida) · visible=$([W]::IsWindowVisible($popup))"
 Captura "ventana-2-movida"
 $mueve = ($movida.L - $antes.L) -ge 150 -and ($movida.T - $antes.T) -ge 40
@@ -88,16 +97,16 @@ $antes2 = $movida
 $cx = $antes2.L + [int](($antes2.R - $antes2.L) * 0.6); $cy = $antes2.T + 52
 Write-Host "Bajo el ratón en la cabecera ($cx,$cy): $(Quien $cx $cy)"
 Arrastrar $cx $cy (-150) (-40)
-$movida2 = Rect $popup
+$movida2 = Cliente $popup
 Write-Host "Tras arrastrar la cabecera: $(Texto $movida2) · visible=$([W]::IsWindowVisible($popup))"
 $mueveCabecera = ($antes2.L - $movida2.L) -ge 100
 
 # 3) REDIMENSIONAR: asa de la esquina inferior derecha, 150 px más ancho y 100 más alto.
-$r = Rect $popup
-$ax = $r.R - 6; $ay = $r.B - 6
+$r = Cliente $popup
+$ax = $r.R - 7; $ay = $r.B - 7
 Write-Host "Bajo el ratón en el asa ($ax,$ay): $(Quien $ax $ay)"
 Arrastrar $ax $ay 150 (60)
-$grande = Rect $popup
+$grande = Cliente $popup
 Write-Host "Tras tirar del asa: $(Texto $grande) · visible=$([W]::IsWindowVisible($popup))"
 Captura "ventana-3-redimensionada"
 $redimensiona = (($grande.R - $grande.L) - ($r.R - $r.L)) -ge 100 -and (($grande.B - $grande.T) - ($r.B - $r.T)) -ge 40
