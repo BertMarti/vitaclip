@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "description": "El portapapeles supervitaminado: historial, herramientas y atajos en una ventanita.",
-  "license": "Elastic-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
     "test": "node --test tests/*.test.js",
-    "check": "for f in src/js/*.js src/js/herramientas/*.js scripts/*.mjs; do node --check \"$f\" || exit 1; done",
+    "check": "for f in src/js/*.js src/js/herramientas/*.js; do node --check \"$f\" || exit 1; done",
     "tauri": "tauri"
   },
   "devDependencies": {

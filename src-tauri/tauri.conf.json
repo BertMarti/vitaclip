@@ -13,16 +13,16 @@
         "label": "popup",
         "title": "Vitaclip",
         "url": "index.html",
-        "width": 680,
-        "height": 460,
-        "minWidth": 520,
+        "width": 380,
+        "height": 480,
+        "minWidth": 300,
         "minHeight": 320,
         "decorations": false,
         "resizable": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false,
-        "center": true,
+        "center": false,
         "focus": true
       }
     ],
@@ -35,9 +35,9 @@
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "El portapapeles supervitaminado",
-    "longDescription": "Historial del portapapeles, fragmentos, transformaciones de texto, calculadora y más en una ventanita que se abre con un atajo.",
+    "longDescription": "Historial del portapapeles, fragmentos, transformaciones de texto, capturas de pantalla con anotaciones y grabación de vídeo en una ventanita que se abre con el atajo que elijas.",
     "copyright": "© 2026 BertMarti",
-    "license": "Elastic-2.0",
+    "license": "MIT",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -46,7 +46,11 @@
       "icons/icon.ico"
     ],
     "linux": {
-      "deb": { "depends": ["libxdo3"] }
+      "deb": {
+        "depends": [
+          "libpipewire-0.3-0t64 | libpipewire-0.3-0"
+        ]
+      }
     }
   }
 }

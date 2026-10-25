@@ -1,13 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Lo mínimo para el popup y los ajustes: eventos y ocultar o cerrar la ventana.",
-  "windows": ["popup", "ajustes"],
+  "description": "Lo mínimo para las ventanas de Vitaclip: eventos, ocultar, cerrar, enfocar, mover y redimensionar.",
+  "windows": [
+    "popup",
+    "ajustes",
+    "captura",
+    "grabacion"
+  ],
   "permissions": [
     "core:event:default",
     "core:window:allow-hide",
     "core:window:allow-close",
     "core:window:allow-set-focus",
-    "core:window:allow-start-dragging"
+    "core:window:allow-start-dragging",
+    "core:window:allow-start-resize-dragging"
   ]
 }
