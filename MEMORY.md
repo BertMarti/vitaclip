@@ -17,6 +17,11 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   xcap. Consecuencia: los .deb/.AppImage piden glibc 2.39 (Ubuntu 24.04+, Debian 13+).
 - **En Windows `xcap::Monitor` no es `Send`**: al hilo de grabación se le pasan las coordenadas y busca el monitor allí. Este tipo de
   error solo sale compilando para Windows: lanza `prueba-windows.yml` antes de publicar.
+- **Mover y redimensionar en Windows (0.2.1):** al empezar un arrastre (`start_dragging`/`start_resize_dragging`) Windows le quita
+  el foco a la ventana y el popup, que se oculta al perder el foco, se cerraba y cortaba el movimiento. Ahora lo inicia Rust
+  (`ventana_arrastrar`), ignora `Focused(false)` mientras el botón izquierdo siga pulsado (`GetAsyncKeyState`) y devuelve el foco
+  al soltar. Verificado con `prueba-ventana-windows.ps1` (ratón simulado; medir con GetClientRect, no GetWindowRect, que incluye
+  bordes invisibles; la pantalla del runner es de 1024×768).
 - Quitadas la pestaña Herramientas, los generadores y las acciones personalizadas (Alberto: «cosas inútiles»).
 - Fallos encontrados al probar de verdad y arreglados: el popup se salía de la pantalla (`outer_size()` devuelve el tamaño viejo justo
   tras `set_size`), los nombres de archivo iban en UTC (ahora `chrono::Local`), y sin fila de ajustes no se guardaban ni la posición
