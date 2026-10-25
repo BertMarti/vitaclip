@@ -31,3 +31,13 @@ test('t sustituye variables y cambia de idioma', () => {
   assert.equal(existe('error.json_invalido'), true);
   assert.equal(existe('error.inventado'), false);
 });
+
+test('los plurales eligen singular solo con 1', async () => {
+  const { t, setIdioma } = await import('../src/js/i18n.js');
+  setIdioma('es');
+  assert.equal(t('clip.contadores', { caracteres: 1, palabras: 2, lineas: 1 }), '1 carácter · 2 palabras · 1 línea');
+  assert.equal(t('boveda.cuantos', { n: 0 }), '0 secretos');
+  setIdioma('en');
+  assert.equal(t('fragmentos.cuantos', { n: 1 }), '1 snippet');
+  setIdioma('es');
+});

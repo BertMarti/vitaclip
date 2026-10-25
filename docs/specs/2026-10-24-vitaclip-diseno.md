@@ -132,6 +132,11 @@ Tipos (JSON, camelCase):
   `ajustes_leer` nunca devuelve la clave de IA completa: devuelve `"••••" + últimos 4` y `ajustes_guardar` la conserva si llega así.
 - `EstadoLicencia {pro: bool, nombre?, email?, emitida?, caduca?, motivo?}` · `EstadoBoveda {existe, abierta}`.
 
+Notas del contrato: para crear un fragmento o una acción se envía `id: 0`. `ia_ejecutar` admite las acciones `traducir`, `resumir`,
+`corregir`, `formal`, `cercano`, `explicar_codigo` y `libre`; `extra` es el idioma destino (traducir) o la orden (libre), y `null` en el
+resto. Los pasos de una acción se guardan como JSON opaco y los aplica la interfaz. Los atajos usan nombres de `event.code`
+(`CommandOrControl+Alt+Shift+KeyV`). `ajustes_abrir` acepta `{bienvenida?: boolean}`.
+
 Eventos de Rust a la interfaz: `historial-cambiado` (sin datos) y `popup-mostrado` (para limpiar la búsqueda y poner el foco).
 
 ### Flujo de pegar

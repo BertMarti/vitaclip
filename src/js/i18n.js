@@ -25,7 +25,11 @@ export function existe(clave) {
 
 export function t(clave, variables = {}) {
   const plantilla = TEXTOS[idioma][clave] ?? es[clave] ?? clave;
-  return plantilla.replace(/\{(\w+)\}/g, (completo, nombre) => (
+  // Plurales: {n|singular|plural} elige según la variable n (singular solo si vale 1).
+  const conPlurales = plantilla.replace(/\{(\w+)\|([^|}]*)\|([^}]*)\}/g, (completo, nombre, uno, varios) => (
+    Object.hasOwn(variables, nombre) ? (Number(variables[nombre]) === 1 ? uno : varios) : completo
+  ));
+  return conPlurales.replace(/\{(\w+)\}/g, (completo, nombre) => (
     Object.hasOwn(variables, nombre) ? String(variables[nombre]) : completo
   ));
 }

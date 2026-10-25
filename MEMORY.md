@@ -33,3 +33,11 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - Desarrollo en la Raspberry Pi 5 (Debian 13 arm64, X11): Rust 1.99 con rustup, WebKitGTK 4.1 (2.54), Node 20.
 - Los delegados de OpenCode usan el perfil `delegado` de `opencode.json` (en este repo), que les deja ejecutar `cargo` y `node --test`.
   Para no recompilar todo en cada worktree se lanzan con `CARGO_TARGET_DIR` apuntando al `target` del repo principal.
+
+## Prueba real en la Raspberry Pi 5 (2026-10-25, Wayland labwc)
+- **WebKitGTK pintaba basura** (bloques y rayas) con el renderizado DMABUF de la GPU de la Pi. Solución en `main.rs`: en Linux se pone
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` si el usuario no lo ha definido. Con eso se ve perfecto.
+- Funciona: bienvenida de ajustes en «Atajo» la primera vez, captura con `wl-copy` (5/5 textos; el token `ghp_…` se ignoró),
+  `vitaclip --mostrar` desde una segunda instancia abre el popup en la que ya corre, calculadora `=21*1,21` + Enter deja `25,41` copiado.
+- Lo que la app pega por sí misma (huella propia) no se añade como entrada nueva: solo sube si ya existía.
+- En Wayland el atajo global de la app no llega (el sistema no lo permite): se usa un atajo del sistema con `vitaclip --mostrar`.

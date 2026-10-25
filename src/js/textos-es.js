@@ -54,8 +54,8 @@ export const es = {
   'clip.tipoImagen': 'Imagen',
   'clip.imagenTamano': 'Imagen {ancho}×{alto}',
   'clip.fijado': 'Fijado',
-  'clip.usos': '{n} usos',
-  'clip.contadores': '{caracteres} caracteres · {palabras} palabras · {lineas} líneas',
+  'clip.usos': '{n} {n|uso|usos}',
+  'clip.contadores': '{caracteres} {caracteres|carácter|caracteres} · {palabras} {palabras|palabra|palabras} · {lineas} {lineas|línea|líneas}',
   'detalle.nada': 'Elige algo de la lista',
   'detalle.pegar': 'Pegar',
   'detalle.fijar': 'Fijar',
@@ -161,7 +161,7 @@ export const es = {
   'fragmentos.abreviaturaEjemplo': 'firma',
   'fragmentos.contenido': 'Contenido',
   'fragmentos.sinNombre': 'Sin nombre',
-  'fragmentos.cuantos': '{n} fragmentos',
+  'fragmentos.cuantos': '{n} {n|fragmento|fragmentos}',
   'fragmentos.vacio': 'Aún no tienes fragmentos.',
   'fragmentos.explicacion': 'Textos que reutilizas (firmas, direcciones, respuestas) con variables que se rellenan solas. Escribe ;abreviatura en el buscador para pegarlos.',
   'fragmentos.irEditar': 'Editar',
@@ -224,7 +224,7 @@ export const es = {
   'acciones.sinClip': 'Elige primero un clip de texto en el Historial',
   'acciones.faltaNombre': 'Ponle un nombre a la acción',
   'acciones.unPaso': '1 paso',
-  'acciones.nPasos': '{n} pasos',
+  'acciones.nPasos': '{n} {n|paso|pasos}',
 
   // Bóveda
   'boveda.proTitulo': 'La bóveda cifrada es Pro',
@@ -244,7 +244,7 @@ export const es = {
   'boveda.bloqueadaExplicacion': 'Escribe tu contraseña maestra para abrirla.',
   'boveda.desbloquear': 'Desbloquear',
   'boveda.bloquear': 'Bloquear',
-  'boveda.cuantos': '{n} secretos',
+  'boveda.cuantos': '{n} {n|secreto|secretos}',
   'boveda.vacia': 'La bóveda está vacía. Añade tu primer secreto.',
   'boveda.anadir': 'Añadir secreto',
   'boveda.tituloCampo': 'Título',
@@ -312,7 +312,7 @@ export const es = {
   'privacidad.importar': 'Importar',
   'privacidad.importarDescripcion': 'Añade los clips de un JSON exportado antes.',
   'privacidad.elegirArchivo': 'Elegir archivo…',
-  'privacidad.importados': 'Importados {n} clips de {archivo}',
+  'privacidad.importados': '{n|Importado|Importados} {n} {n|clip|clips} de {archivo}',
 
   // Licencia
   'licencia.descripcion': 'Pega tu licencia Pro para activar las funciones de pago.',

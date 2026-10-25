@@ -344,6 +344,15 @@ pub fn boveda_bloquear(e: State<'_, Estado>) -> Result<(), String> {
 #[tauri::command]
 pub fn boveda_listar(e: State<'_, Estado>) -> Result<Vec<db::EntradaBoveda>, String> {
     e.exigir_pro()?;
+    // Ni los títulos se enseñan con la bóveda bloqueada.
+    if !e
+        .boveda
+        .lock()
+        .map_err(|_| "Estado no disponible".to_string())?
+        .abierta()
+    {
+        return Err("Desbloquea la bóveda primero.".into());
+    }
     db::bovedas(
         &*e.db
             .lock()
