@@ -65,3 +65,110 @@ pub async fn probar(cfg: &ConfigIa) -> Result<String, String> {
         .await
         .map(|_| cfg.modelo.clone())
 }
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    /// Servidor HTTP de una sola petición que responde `estado` y `cuerpo`; devuelve la URL base y la petición recibida.
+    fn servidor(
+        estado: &'static str,
+        cuerpo: &'static str,
+    ) -> (String, std::sync::mpsc::Receiver<String>) {
+        let oyente = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1/", oyente.local_addr().unwrap());
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let (mut s, _) = oyente.accept().unwrap();
+            let mut leido = Vec::new();
+            let mut trozo = [0u8; 4096];
+            // Lee cabeceras y cuerpo completos antes de responder.
+            loop {
+                let n = s.read(&mut trozo).unwrap_or(0);
+                if n == 0 {
+                    break;
+                }
+                leido.extend_from_slice(&trozo[..n]);
+                let texto = String::from_utf8_lossy(&leido).to_string();
+                if let Some(fin) = texto.find("\r\n\r\n") {
+                    let largo = texto
+                        .lines()
+                        .find_map(|l| {
+                            l.to_ascii_lowercase()
+                                .strip_prefix("content-length:")
+                                .map(|v| v.trim().parse::<usize>().unwrap_or(0))
+                        })
+                        .unwrap_or(0);
+                    if leido.len() >= fin + 4 + largo {
+                        break;
+                    }
+                }
+            }
+            let _ = tx.send(String::from_utf8_lossy(&leido).to_string());
+            let r = format!(
+                "HTTP/1.1 {estado}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{cuerpo}",
+                cuerpo.len()
+            );
+            let _ = s.write_all(r.as_bytes());
+        });
+        (url, rx)
+    }
+
+    fn cfg(url: String, clave: &str) -> ConfigIa {
+        ConfigIa {
+            proveedor: "personalizado".into(),
+            url,
+            modelo: "modelo-prueba".into(),
+            clave: clave.into(),
+        }
+    }
+
+    #[test]
+    fn devuelve_el_texto_y_envia_la_clave() {
+        let (url, rx) = servidor("200 OK", r#"{"choices":[{"message":{"content":"Hello"}}]}"#);
+        let r = tauri::async_runtime::block_on(ejecutar(
+            &cfg(url, "sk-prueba"),
+            "traducir",
+            "Hola",
+            None,
+        ));
+        assert_eq!(r.unwrap(), "Hello");
+        let peticion = rx.recv().unwrap();
+        assert!(peticion.starts_with("POST /v1/chat/completions"));
+        assert!(peticion
+            .to_ascii_lowercase()
+            .contains("authorization: bearer sk-prueba"));
+        assert!(peticion.contains("modelo-prueba"));
+    }
+
+    #[test]
+    fn sin_clave_no_manda_cabecera_y_traduce_errores() {
+        let (url, rx) = servidor("401 Unauthorized", "{}");
+        let r = tauri::async_runtime::block_on(ejecutar(&cfg(url, ""), "resumir", "texto", None));
+        assert_eq!(r.unwrap_err(), "La clave de IA no es válida.");
+        assert!(!rx
+            .recv()
+            .unwrap()
+            .to_ascii_lowercase()
+            .contains("authorization"));
+        let (url, _rx) = servidor("429 Too Many Requests", "{}");
+        let r = tauri::async_runtime::block_on(ejecutar(&cfg(url, ""), "resumir", "texto", None));
+        assert!(r.unwrap_err().contains("saturado"));
+        let r = tauri::async_runtime::block_on(ejecutar(
+            &cfg("http://127.0.0.1:1".into(), ""),
+            "resumir",
+            "x",
+            None,
+        ));
+        assert!(r.unwrap_err().starts_with("No se pudo conectar"));
+        let r = tauri::async_runtime::block_on(ejecutar(
+            &cfg("http://127.0.0.1:1".into(), ""),
+            "otra",
+            "x",
+            None,
+        ));
+        assert_eq!(r.unwrap_err(), "Acción de IA desconocida.");
+    }
+}

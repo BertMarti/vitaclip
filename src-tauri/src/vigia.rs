@@ -8,6 +8,8 @@ use tauri::{AppHandle, Emitter, Manager};
 pub fn iniciar(app: AppHandle) {
     thread::spawn(move || {
         let mut ultima: Option<String> = None;
+        // Huella de los píxeles crudos de la última imagen vista: evita recodificar a PNG cada 400 ms.
+        let mut ultima_cruda: Option<String> = None;
         let mut espera = Duration::from_millis(400);
         let mut patrones_fuente: Vec<String> = Vec::new();
         let mut patrones: Vec<Regex> = Vec::new();
@@ -31,6 +33,7 @@ pub fn iniciar(app: AppHandle) {
                 continue;
             };
             let (bytes, imagen, ancho, alto) = if let Ok(texto) = cb.get_text() {
+                ultima_cruda = None;
                 if texto.is_empty() || texto.len() > 1_000_000 {
                     continue;
                 }
@@ -41,6 +44,11 @@ pub fn iniciar(app: AppHandle) {
                 bytes,
             }) = cb.get_image()
             {
+                let cruda = db::huella(&bytes);
+                if ultima_cruda.as_ref() == Some(&cruda) {
+                    continue;
+                }
+                ultima_cruda = Some(cruda);
                 let mut png = Vec::new();
                 if image::codecs::png::PngEncoder::new(&mut png)
                     .write_image(
