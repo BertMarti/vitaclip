@@ -153,10 +153,12 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
     let (tx, rxq) = sync_channel::<(f64, xcap::Frame)>(8);
     let captura_detener = detener.clone();
     let app_hilo = app.clone();
+    // En Windows el monitor de xcap no se puede mover a otro hilo: se pasa su esquina y se vuelve a buscar allí.
+    let (esquina_x, esquina_y) = (mx + 1, my + 1);
     let captura = thread::spawn(move || {
-        let grabador = monitor
-            .video_recorder()
+        let grabador = xcap::Monitor::from_point(esquina_x, esquina_y)
             .map_err(|e| e.to_string())
+            .and_then(|m| m.video_recorder().map_err(|e| e.to_string()))
             .and_then(|(g, rx)| g.start().map(|_| (g, rx)).map_err(|e| e.to_string()));
         let (grabador, rx_frames) = match grabador {
             Ok(x) => x,

@@ -17,9 +17,9 @@ jobs:
             args: --target aarch64-apple-darwin
           - plataforma: macos-latest
             args: --target x86_64-apple-darwin
-          - plataforma: ubuntu-22.04
+          - plataforma: ubuntu-24.04
             args: ""
-          - plataforma: ubuntu-22.04-arm
+          - plataforma: ubuntu-24.04-arm
             args: ""
           - plataforma: windows-latest
             args: ""

@@ -13,6 +13,10 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - **Ventana compacta** 380×480 (mínimo 300×320), junto al ratón o en la posición recordada; tamaño guardado en píxeles LÓGICOS. En
   Wayland las apps no pueden colocar sus ventanas: allí la pone el compositor.
 - **Crear ventanas desde comandos síncronos bloquea Tauri en Windows**: los comandos que crean ventanas son `async` o usan hilos.
+- **Linux se compila en Ubuntu 24.04** (x64 y arm64): el PipeWire de la 22.04 (0.3.48) es demasiado viejo para `pipewire` 0.10 de
+  xcap. Consecuencia: los .deb/.AppImage piden glibc 2.39 (Ubuntu 24.04+, Debian 13+).
+- **En Windows `xcap::Monitor` no es `Send`**: al hilo de grabación se le pasan las coordenadas y busca el monitor allí. Este tipo de
+  error solo sale compilando para Windows: lanza `prueba-windows.yml` antes de publicar.
 - Quitadas la pestaña Herramientas, los generadores y las acciones personalizadas (Alberto: «cosas inútiles»).
 - Fallos encontrados al probar de verdad y arreglados: el popup se salía de la pantalla (`outer_size()` devuelve el tamaño viejo justo
   tras `set_size`), los nombres de archivo iban en UTC (ahora `chrono::Local`), y sin fila de ajustes no se guardaban ni la posición
