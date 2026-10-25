@@ -25,7 +25,8 @@ pub fn registrar(app: &AppHandle, ajustes: &db::Atajos) -> Result<(), String> {
         if texto.is_empty() {
             continue;
         }
-        let s = Shortcut::from_str(texto).map_err(|_| {
+        // Por tecla física en cualquier distribución de teclado (ver teclado.rs).
+        let s = Shortcut::from_str(texto).map(crate::teclado::adaptar).map_err(|_| {
             format!("El atajo de {nombre} no es válido o ya lo usa otra aplicación.")
         })?;
         if nuevos.insert(s, accion).is_some() {
