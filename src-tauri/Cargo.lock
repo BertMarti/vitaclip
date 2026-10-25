@@ -5925,6 +5925,7 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
+ "tauri-runtime",
  "tokio",
  "windows-sys 0.59.0",
  "xcap",

@@ -79,6 +79,7 @@ usa otra aplicación.» y deja todos como estaban. Dos acciones con la misma com
 | `carpeta_elegir` | `{tipo}` | `string \| null` (diálogo de carpeta; guarda en ajustes si se elige) |
 | `archivo_mostrar` | `{ruta}` | `()` (solo rutas dentro de las dos carpetas) |
 | `archivo_copiar_imagen` | `{ruta}` | `()` (solo PNG de la carpeta de capturas) |
+| `ventana_arrastrar` | `{modo: "mover" \| "redimensionar"}` | `()` — mueve o redimensiona (esquina inferior derecha) la ventana que lo pide; mientras dure el arrastre el popup no se oculta al perder el foco (Windows se lo quita) |
 
 Eventos de Rust: `historial-cambiado`, `popup-mostrado` (como antes), `captura-lista` (a la ventana `captura`, con `captura_info`),
 `video-estado` `{grabando, segundos}` (a todas, cada segundo mientras graba y al cambiar), `video-guardado` `{ruta}` y

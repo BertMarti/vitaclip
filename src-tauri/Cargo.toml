@@ -17,6 +17,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-global-shortcut = "2"
+# Solo por ResizeDirection (tauri no la reexporta); misma versión que ya usa tauri.
+tauri-runtime = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }

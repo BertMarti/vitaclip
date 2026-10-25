@@ -265,6 +265,8 @@ const comandos = {
     abierta();
     return true;
   },
+  // En el navegador no hay ventana que mover.
+  ventana_arrastrar: () => null,
   ventana_ocultar: () => {
     console.info('[simulador] ventana_ocultar');
   },

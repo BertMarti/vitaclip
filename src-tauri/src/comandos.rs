@@ -377,6 +377,16 @@ pub fn historial_importar(e: State<'_, Estado>, json: String) -> Result<u32, Str
         &json,
     )
 }
+/// Mover (`modo` = "mover") o redimensionar desde la esquina ("redimensionar") la ventana sin bordes que lo pide.
+#[tauri::command]
+pub fn ventana_arrastrar(
+    app: AppHandle,
+    ventana: tauri::WebviewWindow,
+    modo: String,
+) -> Result<(), String> {
+    atajo::arrastrar(&app, &ventana, modo == "redimensionar")
+}
+
 #[tauri::command]
 pub fn pausa_cambiar(e: State<'_, Estado>, pausado: bool) -> Result<(), String> {
     e.pausar(pausado);

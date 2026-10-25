@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Lo mínimo para las ventanas de Vitaclip: eventos, ocultar, cerrar, enfocar, mover y redimensionar.",
+  "description": "Lo mínimo para las ventanas de Vitaclip: eventos, ocultar, cerrar y enfocar (mover y redimensionar lo hace Rust).",
   "windows": [
     "popup",
     "ajustes",
@@ -12,8 +12,6 @@
     "core:event:default",
     "core:window:allow-hide",
     "core:window:allow-close",
-    "core:window:allow-set-focus",
-    "core:window:allow-start-dragging",
-    "core:window:allow-start-resize-dragging"
+    "core:window:allow-set-focus"
   ]
 }

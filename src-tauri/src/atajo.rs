@@ -2,6 +2,7 @@ use crate::{captura, db, video};
 use std::{
     collections::HashMap,
     str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
@@ -211,7 +212,59 @@ fn colocar_junto_al_raton(w: &WebviewWindow, tamano: tauri::PhysicalSize<u32>) {
     }
 }
 
+/// Mientras se mueve o redimensiona la ventana, Windows le quita el foco: no hay que ocultarla por eso.
+static ARRASTRANDO: AtomicBool = AtomicBool::new(false);
+
+/// Empieza a mover o redimensionar la ventana que lo pide y protege el popup de ocultarse mientras dure.
+pub fn arrastrar(app: &AppHandle, w: &WebviewWindow, redimensionar: bool) -> Result<(), String> {
+    ARRASTRANDO.store(true, Ordering::SeqCst);
+    let resultado = if redimensionar {
+        w.as_ref()
+            .window()
+            .start_resize_dragging(tauri_runtime::ResizeDirection::SouthEast)
+    } else {
+        w.start_dragging()
+    };
+    if let Err(e) = resultado {
+        ARRASTRANDO.store(false, Ordering::SeqCst);
+        return Err(e.to_string());
+    }
+    let app = app.clone();
+    let ventana = w.clone();
+    std::thread::spawn(move || {
+        let inicio = Instant::now();
+        // Se espera a soltar el botón (en Windows se lee su estado real; en el resto basta un momento).
+        std::thread::sleep(Duration::from_millis(80));
+        while boton_izquierdo_pulsado() && inicio.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(40));
+        }
+        ARRASTRANDO.store(false, Ordering::SeqCst);
+        // Al soltar, la ventana recupera el foco para seguir escribiendo en ella.
+        let _ = app.run_on_main_thread(move || {
+            if ventana.is_visible().unwrap_or(false) && !ventana.is_focused().unwrap_or(true) {
+                let _ = ventana.set_focus();
+            }
+        });
+    });
+    Ok(())
+}
+
+#[cfg(windows)]
+fn boton_izquierdo_pulsado() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
+    // SAFETY: función de Win32 sin punteros; el bit alto indica que la tecla está pulsada ahora mismo.
+    (unsafe { GetAsyncKeyState(i32::from(VK_LBUTTON)) } as u16 & 0x8000) != 0
+}
+
+#[cfg(not(windows))]
+fn boton_izquierdo_pulsado() -> bool {
+    false
+}
+
 pub fn foco_permitido() -> bool {
+    if ARRASTRANDO.load(Ordering::SeqCst) {
+        return false;
+    }
     ULTIMO_MOSTRADO
         .get()
         .and_then(|x| x.lock().ok())

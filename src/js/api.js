@@ -71,13 +71,10 @@ export const ventanaOcultar = () => invoke('ventana_ocultar');
 export const ajustesAbrir = (bienvenida = false) => invoke('ajustes_abrir', { bienvenida: Boolean(bienvenida) });
 export const pausaCambiar = pausado => invoke('pausa_cambiar', { pausado });
 
-// Mover y redimensionar la ventana sin bordes (API de ventanas de Tauri; en el navegador no hace nada).
-function ventanaActual() {
-  return tauri?.window?.getCurrentWindow?.() ?? null;
-}
-
-export const arrastrarVentana = () => ventanaActual()?.startDragging() ?? Promise.resolve();
-export const redimensionarVentana = () => ventanaActual()?.startResizeDragging('SouthEast') ?? Promise.resolve();
+// Mover y redimensionar la ventana sin bordes. Lo hace Rust: así sabe que se está arrastrando y no oculta el popup
+// cuando Windows le quita el foco durante el arrastre.
+export const arrastrarVentana = () => invoke('ventana_arrastrar', { modo: 'mover' });
+export const redimensionarVentana = () => invoke('ventana_arrastrar', { modo: 'redimensionar' });
 
 // Eventos de Rust: historial-cambiado, popup-mostrado, captura-lista, video-estado, video-guardado, video-error.
 export const alEvento = (nombre, funcion) => listen(nombre, funcion);
