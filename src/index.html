@@ -1,1 +1,22 @@
-<!doctype html><title>Vitaclip</title>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+    <link rel="stylesheet" href="css/vitaclip.css">
+    <title>Vitaclip</title>
+  </head>
+  <body class="popup">
+    <div class="ventana">
+      <header class="cabecera" data-tauri-drag-region>
+        <span id="icono-buscar" class="icono-buscar" data-tauri-drag-region></span>
+        <input id="buscador" class="buscador" type="text" autofocus autocomplete="off" spellcheck="false">
+      </header>
+      <nav id="pestanas" class="pestanas" role="tablist" data-tauri-drag-region></nav>
+      <main id="contenido" class="contenido"></main>
+      <footer id="pie" class="pie" data-tauri-drag-region></footer>
+    </div>
+    <script type="module" src="js/popup.js"></script>
+  </body>
+</html>
