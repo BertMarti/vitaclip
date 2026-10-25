@@ -10,7 +10,10 @@ Descarga la versión para tu sistema desde **[Releases](https://github.com/BertM
 ## macOS
 1. Descarga el archivo según tu procesador: **aarch64** (Apple Silicon M1, M2...) o **x64** (Intel).
 2. Abre el `.dmg` y arrastra **Vitaclip** a la carpeta **Aplicaciones**.
-3. La primera vez, haz **clic derecho → Abrir** sobre la aplicación.
+3. La primera vez, haz **clic derecho → Abrir** sobre la aplicación (no está firmada). Si macOS dice que «está dañada», ejecuta en Terminal:
+   ```bash
+   xattr -cr /Applications/Vitaclip.app
+   ```
 4. **Permisos necesarios:**
    - **Accesibilidad:** Ajustes del Sistema → Privacidad y seguridad → Accesibilidad. Activa Vitaclip para permitir el pegado automático.
    - **Grabación de pantalla:** Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla. Activa Vitaclip para poder realizar capturas y grabaciones.
@@ -28,6 +31,7 @@ Instala el paquete correspondiente a tu distribución:
   - `vitaclip --captura`
   - `vitaclip --video`
   La grabación de vídeo en Wayland mostrará un diálogo del sistema para que elijas qué pantalla compartir (vía PipeWire / xdg-desktop-portal).
+- En **GNOME**, el icono de la bandeja necesita la extensión *AppIndicator and KStatusNotifierItem Support*.
 
 ---
 
@@ -44,3 +48,10 @@ Los datos de la aplicación (historial, ajustes, fragmentos) se guardan en:
 | Windows | `%APPDATA%\com.bertmarti.vitaclip` |
 | macOS | `~/Library/Application Support/com.bertmarti.vitaclip` |
 | Linux | `~/.local/share/com.bertmarti.vitaclip` |
+
+## Desinstalar
+- **Windows:** Configuración → Aplicaciones → Vitaclip → Desinstalar.
+- **macOS:** arrastra `Vitaclip.app` de Aplicaciones a la papelera.
+- **Linux:** `sudo apt remove vitaclip` (o `sudo dnf remove vitaclip`), o borra el `.AppImage`.
+
+Tus datos se quedan en las carpetas de arriba por si vuelves; bórralas si quieres eliminarlos.
