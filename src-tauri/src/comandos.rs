@@ -180,6 +180,10 @@ pub fn ajustes_guardar(
     mut ajustes: db::Ajustes,
 ) -> Result<db::Ajustes, String> {
     let anterior = ajustes_desde(&e)?;
+    // La geometría de la ventana la guarda Rust al moverla; de la interfaz solo vale el modo.
+    let modo = std::mem::take(&mut ajustes.ventana.modo);
+    ajustes.ventana = anterior.ventana.clone();
+    ajustes.ventana.modo = modo;
     if ajustes.ia.clave.starts_with("••••") {
         ajustes.ia.clave = anterior.ia.clave;
     }

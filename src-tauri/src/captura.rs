@@ -198,6 +198,20 @@ pub fn guardar(app: AppHandle, e: &Estado, png: String) -> Result<String, String
     std::fs::write(&p, &bytes).map_err(|e| e.to_string())?;
     cerrar(&app, e);
     let _ = img;
+    {
+        // La ventana de captura se cierra al guardar: el aviso del sistema dice dónde quedó.
+        use tauri_plugin_notification::NotificationExt;
+        let _ = app
+            .notification()
+            .builder()
+            .title("Captura guardada")
+            .body(
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("captura.png"),
+            )
+            .show();
+    }
     Ok(p.to_string_lossy().into_owned())
 }
 pub fn cerrar(app: &AppHandle, e: &Estado) {
