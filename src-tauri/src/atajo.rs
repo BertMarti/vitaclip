@@ -97,20 +97,23 @@ pub fn mostrar_popup(app: &AppHandle) {
             })
             .unwrap_or_default();
         // El tamaño se guarda en píxeles lógicos para que se vea igual con cualquier escalado de pantalla.
-        let _ = w.set_size(tauri::LogicalSize::new(
+        // Se calcula aquí en físicos: justo después de set_size, outer_size() aún devuelve el tamaño anterior.
+        let logico = tauri::LogicalSize::new(
             f64::from(ajustes.ventana.ancho.max(300)),
             f64::from(ajustes.ventana.alto.max(320)),
-        ));
+        );
+        let tamano: tauri::PhysicalSize<u32> = logico.to_physical(w.scale_factor().unwrap_or(1.0));
+        let _ = w.set_size(logico);
         if ajustes.ventana.modo == "recordar" {
             if let (Some(x), Some(y)) = (ajustes.ventana.x, ajustes.ventana.y) {
-                if !colocar_recordada(&w, x, y) {
-                    colocar_junto_al_raton(&w);
+                if !colocar_recordada(&w, x, y, tamano) {
+                    colocar_junto_al_raton(&w, tamano);
                 }
             } else {
-                colocar_junto_al_raton(&w);
+                colocar_junto_al_raton(&w, tamano);
             }
         } else {
-            colocar_junto_al_raton(&w);
+            colocar_junto_al_raton(&w, tamano);
         }
         let _ = w.show();
         let _ = w.set_focus();
@@ -131,11 +134,8 @@ pub fn mostrar_popup(app: &AppHandle) {
     }
 }
 
-fn colocar_recordada(w: &WebviewWindow, x: i32, y: i32) -> bool {
+fn colocar_recordada(w: &WebviewWindow, x: i32, y: i32, tamano: tauri::PhysicalSize<u32>) -> bool {
     let Ok(monitores) = w.available_monitors() else {
-        return false;
-    };
-    let Ok(tamano) = w.outer_size() else {
         return false;
     };
     if monitores.into_iter().any(|m| {
@@ -189,8 +189,8 @@ pub fn guardar_geometria(app: &AppHandle, w: &WebviewWindow) {
     }
 }
 
-fn colocar_junto_al_raton(w: &WebviewWindow) {
-    let (Ok(raton), Ok(tamano)) = (w.cursor_position(), w.outer_size()) else {
+fn colocar_junto_al_raton(w: &WebviewWindow, tamano: tauri::PhysicalSize<u32>) {
+    let Ok(raton) = w.cursor_position() else {
         return;
     };
     let Ok(monitores) = w.available_monitors() else {

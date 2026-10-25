@@ -42,6 +42,7 @@ tauri-plugin-notification = "2"
 xcap = "0.9.8"
 openh264 = "0.9"
 muxide = "0.5"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_UI_Input_KeyboardAndMouse"] }
