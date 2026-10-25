@@ -2,6 +2,22 @@
 
 Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 
+## Versión 0.2 (2026-10-25)
+- **Todo gratis y MIT (Alberto, 25/10):** se quitan la licencia Ed25519, el Pro, `scripts/licencia.mjs` y la Elastic License. Las
+  decisiones de licencias de abajo quedan solo como historia. Las claves de `~/homelab/.claves-vitaclip/` ya no se usan.
+- **Capturas y vídeo con `xcap` 0.9.8 + `openh264` 0.9 + `muxide` 0.5** (todo en Rust, sin ffmpeg): comprobado en la Pi. Capturar en
+  Wayland 276 ms, en X11 23 ms. openh264: `UsageType::ScreenContentRealTime` (el NonRealTime falla la validación) y sin `Profile::High`.
+  En la Pi la codificación no llega al tiempo real (≈6 fps a 1600×900): la cola descarta fotogramas; un PC va a 30-60 fps.
+- **Grabar en Wayland** necesita el selector del portal (xdg-desktop-portal); la Pi no tiene ninguno y falla con «Sources not selected».
+  Para probar: Xvfb + xdotool (ver SKILLS.md).
+- **Ventana compacta** 380×480 (mínimo 300×320), junto al ratón o en la posición recordada; tamaño guardado en píxeles LÓGICOS. En
+  Wayland las apps no pueden colocar sus ventanas: allí la pone el compositor.
+- **Crear ventanas desde comandos síncronos bloquea Tauri en Windows**: los comandos que crean ventanas son `async` o usan hilos.
+- Quitadas la pestaña Herramientas, los generadores y las acciones personalizadas (Alberto: «cosas inútiles»).
+- Fallos encontrados al probar de verdad y arreglados: el popup se salía de la pantalla (`outer_size()` devuelve el tamaño viejo justo
+  tras `set_size`), los nombres de archivo iban en UTC (ahora `chrono::Local`), y sin fila de ajustes no se guardaban ni la posición
+  ni la pausa (ahora `db::ajustes()` con valores por defecto).
+
 ## Decisiones (2026-10-24)
 - **Nombre:** Vitaclip (clip + vitamina), «el portapapeles supervitaminado». Repo público `BertMarti/vitaclip`.
 - **Tauri v2 y no Electron:** instaladores de ~10 MB en lugar de ~100 MB, atajos globales y bandeja oficiales, compilación gratis en

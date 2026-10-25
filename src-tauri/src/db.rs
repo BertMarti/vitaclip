@@ -404,6 +404,15 @@ pub fn ajuste_leer(c: &Connection, clave: &str) -> Result<Option<String>, String
     .optional()
     .map_err(|e| e.to_string())
 }
+/// Ajustes guardados, o los de por defecto si aún no se han guardado nunca (o están dañados).
+pub fn ajustes(c: &Connection) -> Ajustes {
+    ajuste_leer(c, "ajustes")
+        .ok()
+        .flatten()
+        .and_then(|x| serde_json::from_str(&x).ok())
+        .unwrap_or_default()
+}
+
 pub fn ajuste_guardar(c: &Connection, clave: &str, valor: &str) -> Result<(), String> {
     c.execute(
         "INSERT INTO ajustes(clave,valor) VALUES(?,?) ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",

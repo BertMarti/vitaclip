@@ -3,9 +3,11 @@
 Guía para cualquier agente de programación (convención agents.md). Léela entera antes de tocar nada.
 
 ## Proyecto
-Vitaclip: gestor de portapapeles «supervitaminado» para Windows, macOS y Linux hecho con Tauri v2. Rust en `src-tauri/src/`,
+Vitaclip: gestor de portapapeles «supervitaminado» con capturas de pantalla y grabación de vídeo, para Windows, macOS y Linux, hecho con
+Tauri v2. Gratis y MIT: no hay licencias ni funciones de pago. Rust en `src-tauri/src/`,
 interfaz sin build en `src/`, pruebas de JS en `tests/`. El diseño y el contrato entre interfaz y Rust están en
-`docs/specs/2026-10-24-vitaclip-diseno.md`: respétalo al pie de la letra (nombres de comandos, campos y eventos).
+`docs/specs/2026-10-24-vitaclip-diseno.md` y, para la 0.2 (manda en lo que cambie), `docs/specs/2026-10-25-vitaclip-v02-diseno.md`:
+respétalos al pie de la letra (nombres de comandos, campos, eventos y ventanas).
 
 ## Comandos
 - Pruebas JS: `npm test` · sintaxis: `npm run check`
@@ -19,8 +21,8 @@ interfaz sin build en `src/`, pruebas de JS en `tests/`. El diseño y el contrat
 - La interfaz solo llama a Rust desde `src/js/api.js`.
 - Funciones de `src/js/herramientas/` puras (sin DOM ni Tauri) y con prueba en `tests/`.
 - Rust: errores como `Result<T, String>` con mensajes en español listos para enseñar; nada de `unwrap()` fuera de pruebas salvo
-  en cosas imposibles (y con comentario). Las funciones Pro llaman a `estado.exigir_pro()?` al principio.
-- No toques `src-tauri/src/licencia.rs`, `src-tauri/src/boveda.rs`, `tauri.conf.json` ni `capabilities/` salvo que el encargo lo diga.
+  en cosas imposibles (y con comentario). Nada pesado ni creación de ventanas en el hilo principal (usa `async`, `spawn_blocking` o hilos).
+- No toques `src-tauri/src/boveda.rs`, `src-tauri/src/teclado.rs`, `tauri.conf.json` ni `capabilities/` salvo que el encargo lo diga.
 - No hagas commit ni push; no instales nada global; no salgas de tu carpeta. Eso lo hace el orquestador.
 - Nada de secretos ni datos personales: en ejemplos y pruebas usa `ana@example.com`, `sk-prueba`, etc.
 
@@ -33,7 +35,7 @@ Regla de Alberto (10/10/2026) para todos sus proyectos: el orquestador (Claude C
 | Documentación (README, guías) | `google/gemini-3-flash-preview` (o 3.5/3.7 Flash) | `--agent delegado`, solo `.md` |
 | Pruebas extra | Zen gratis: `opencode/big-pickle`, `opencode/mimo-v2.6-flash-free` | `--agent delegado` |
 | Revisión cruzada (seguridad y errores) | `google/gemini-3.7-flash` | `--agent plan`, solo lectura |
-| Diseño, seguridad (licencia, bóveda, CSP, capacidades), integración, arreglos pequeños, pruebas reales, commit y publicación | Claude | — |
+| Diseño, seguridad (bóveda, CSP, capacidades), integración, arreglos pequeños, pruebas reales, commit y publicación | Claude | — |
 
 Las sesiones lanzadas con `opencode run` se ven también en la aplicación de escritorio de OpenCode (comparten la base de datos de
 `~/.local/share/opencode`). Si un delegado falla dos veces la misma tarea, la termina Claude y lo dice.

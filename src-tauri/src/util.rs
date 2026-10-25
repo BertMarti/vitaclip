@@ -12,7 +12,6 @@ pub fn fecha_hora_local() -> String {
     chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
 }
 
-
 pub fn nombre_unico(dir: &std::path::Path, extension: &str) -> std::path::PathBuf {
     let base = format!("vitaclip-{}.{}", fecha_hora_local(), extension);
     let mut ruta = dir.join(&base);

@@ -5,12 +5,12 @@ description: Encargar trabajo de Vitaclip al modelo que toca (GPT-5.6 Luna, Gemi
 
 # Delegar una tarea de Vitaclip
 
-Reparto en `AGENTS.md` → «Reparto del trabajo». Claude se queda con diseño, seguridad (licencia, bóveda, CSP, capacidades), integración y publicación.
+Reparto en `AGENTS.md` → «Reparto del trabajo». Claude se queda con diseño, seguridad (bóveda, CSP, capacidades), integración y publicación.
 
 1. Worktree: `git worktree add -q ~/homelab/.wt/vitaclip-<tarea> -b vitaclip-<tarea>` desde el repo.
 2. Encargo CERRADO en `~/homelab/.wt/encargos/encargo-vitaclip-<tarea>.txt`: objetivo, archivos que puede tocar y los que no,
    contrato exacto (sección 4 del spec), reglas de `AGENTS.md`, comprobaciones (`npm test`, `cargo test`, `cargo clippy`)
-   y «resume en N líneas». Nada de secretos ni licencias reales.
+   y «resume en N líneas». Nada de secretos ni datos reales.
 3. Lanzar en segundo plano (el perfil `delegado` está en `opencode.json` del repo):
    ```bash
    source ~/.cargo/env

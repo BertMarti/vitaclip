@@ -6,7 +6,7 @@ description: Publicar una versión de Vitaclip (pruebas, revisión de privacidad
 # Publicar una versión
 
 1. Pruebas completas (skill `vitaclip-revisar-entrega`, paso 2) en verde.
-2. Privacidad: `git diff origin/main --stat` y grep de emails, rutas personales, IPs y `VITA1.` en todo el diff. Cualquier coincidencia bloquea
+2. Privacidad: `git diff origin/main --stat` y grep de emails, rutas personales e IPs en todo el diff. Cualquier coincidencia bloquea
    (nunca `| tail` antes de `git push`: usa `if …; then git push; fi`).
 3. Sube la versión en `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json` (y `Cargo.lock` con `cargo update -p vitaclip`).
 4. `git commit`, `git tag vX.Y.Z`, `git push && git push --tags`.

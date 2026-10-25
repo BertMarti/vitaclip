@@ -172,12 +172,7 @@ pub fn guardar_geometria(app: &AppHandle, w: &WebviewWindow) {
         return;
     };
     let Ok(c) = e.db.lock() else { return };
-    let Ok(Some(valor)) = db::ajuste_leer(&c, "ajustes") else {
-        return;
-    };
-    let Ok(mut a) = serde_json::from_str::<db::Ajustes>(&valor) else {
-        return;
-    };
+    let mut a = db::ajustes(&c);
     a.ventana.x = Some(p.x);
     a.ventana.y = Some(p.y);
     let escala = w.scale_factor().unwrap_or(1.0).max(0.1);

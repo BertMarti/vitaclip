@@ -191,13 +191,10 @@ fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
                 let nuevo = !e.esta_pausado();
                 e.pausar(nuevo);
                 if let Ok(c) = e.db.lock() {
-                    if let Ok(Some(valor)) = db::ajuste_leer(&c, "ajustes") {
-                        if let Ok(mut ajustes) = serde_json::from_str::<db::Ajustes>(&valor) {
-                            ajustes.pausado = nuevo;
-                            if let Ok(serializado) = serde_json::to_string(&ajustes) {
-                                let _ = db::ajuste_guardar(&c, "ajustes", &serializado);
-                            }
-                        }
+                    let mut ajustes = db::ajustes(&c);
+                    ajustes.pausado = nuevo;
+                    if let Ok(serializado) = serde_json::to_string(&ajustes) {
+                        let _ = db::ajuste_guardar(&c, "ajustes", &serializado);
                     }
                 }
                 let _ = pausar.set_checked(nuevo);
