@@ -1,4 +1,4 @@
-use crate::{db, estado::Estado};
+use crate::{db, estado::Estado, util};
 use arboard::ImageData;
 use image::ImageEncoder;
 use regex::Regex;
@@ -81,7 +81,7 @@ pub fn iniciar(app: AppHandle) {
                 if propia.as_ref() == Some(&huella) {
                     if let Ok(db) = estado.db.lock() {
                         if let Ok(Some(id)) = db::id_por_huella(&db, &huella) {
-                            let _ = db::marcar_usado(&db, id, ahora());
+                            let _ = db::marcar_usado(&db, id, util::ahora());
                         }
                     }
                     continue;
@@ -111,29 +111,18 @@ pub fn iniciar(app: AppHandle) {
             {
                 continue;
             }
-            let limite = if estado.es_pro() {
-                ajustes.limite_historial.clamp(10, 10_000)
-            } else {
-                ajustes.limite_historial.min(300)
-            };
-            if imagen
-                && bytes.len()
-                    > if estado.es_pro() {
-                        20 * 1024 * 1024
-                    } else {
-                        3 * 1024 * 1024
-                    }
-            {
+            let limite = ajustes.limite_historial.clamp(10, 10_000);
+            if imagen && bytes.len() > 20 * 1024 * 1024 {
                 continue;
             }
             let Ok(c) = estado.db.lock() else { continue };
             let nuevo = if imagen {
-                db::guardar_imagen(&c, &bytes, ancho as u32, alto as u32, ahora(), limite)
+                db::guardar_imagen(&c, &bytes, ancho as u32, alto as u32, util::ahora(), limite)
             } else {
                 db::guardar_texto(
                     &c,
                     std::str::from_utf8(&bytes).unwrap_or_default(),
-                    ahora(),
+                    util::ahora(),
                     limite,
                 )
             };
@@ -142,11 +131,4 @@ pub fn iniciar(app: AppHandle) {
             }
         }
     });
-}
-fn ahora() -> i64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|x| x.as_millis() as i64)
-        .unwrap_or(0)
 }

@@ -1,0 +1,392 @@
+use crate::{db, estado::Estado, util};
+use openh264::{
+    encoder::{BitRate, Encoder, EncoderConfig, FrameRate, RateControlMode, UsageType},
+    formats::{RgbaSliceU8, YUVBuffer},
+    OpenH264API,
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{sync_channel, Receiver},
+        Arc,
+    },
+    thread::{self, JoinHandle},
+    time::{Duration, Instant},
+};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Region {
+    pub x: i32,
+    pub y: i32,
+    pub ancho: u32,
+    pub alto: u32,
+}
+
+pub struct Grabacion {
+    pub inicio: Instant,
+    pub ruta: PathBuf,
+    detener: Arc<AtomicBool>,
+    captura: Option<JoinHandle<()>>,
+    codificacion: Option<JoinHandle<Result<(), String>>>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EstadoVideo {
+    pub grabando: bool,
+    pub segundos: f64,
+}
+
+pub fn grabando(app: &AppHandle) -> bool {
+    app.try_state::<Estado>()
+        .and_then(|e| e.grabacion.lock().ok().map(|x| x.is_some()))
+        .unwrap_or(false)
+}
+
+fn carpetas(app: &AppHandle) -> Result<(PathBuf, db::Video), String> {
+    let ajustes = app.try_state::<Estado>().ok_or("Estado no disponible")?;
+    let a = ajustes
+        .db
+        .lock()
+        .map_err(|_| "Base de datos no disponible".to_string())?;
+    let cfg = db::ajuste_leer(&a, "ajustes")?
+        .and_then(|x| serde_json::from_str::<db::Ajustes>(&x).ok())
+        .unwrap_or_default();
+    let dir = if cfg.video.carpeta.is_empty() {
+        app.path()
+            .video_dir()
+            .or_else(|_| app.path().home_dir())
+            .map_err(|e| e.to_string())?
+            .join("Vitaclip")
+    } else {
+        PathBuf::from(&cfg.video.carpeta)
+    };
+    Ok((dir, cfg.video))
+}
+
+pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("captura") {
+        let _ = w.close();
+    }
+    let estado = app.state::<Estado>();
+    let mut guard = estado
+        .grabacion
+        .lock()
+        .map_err(|_| "Estado no disponible".to_string())?;
+    if guard.is_some() {
+        return Err("Ya hay una grabación en curso".into());
+    }
+    let (dir, cfg) = carpetas(&app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let ruta = util::nombre_unico(&dir, "mp4");
+    let (mx, my, monitor) = {
+        let popup = app.get_webview_window("popup");
+        let p = popup
+            .as_ref()
+            .and_then(|w| w.cursor_position().ok())
+            .map(|p| (p.x as i32, p.y as i32))
+            .unwrap_or((0, 0));
+        let m = xcap::Monitor::from_point(p.0, p.1)
+            .or_else(|_| {
+                xcap::Monitor::all()
+                    .map_err(|e| e.to_string())
+                    .and_then(|mut x| x.pop().ok_or_else(|| "No hay monitores".to_string()))
+            })
+            .map_err(|e| e.to_string())?;
+        (m.x().unwrap_or(0), m.y().unwrap_or(0), m)
+    };
+    let (rw, rh, region_x, region_y) = if let Some(r) = region {
+        let (x, y, w, h) = recorte(r.x, r.y, r.ancho, r.alto);
+        (w, h, x, y)
+    } else {
+        (
+            monitor.width().map_err(|e| e.to_string())? & !1,
+            monitor.height().map_err(|e| e.to_string())? & !1,
+            0,
+            0,
+        )
+    };
+    if rw < 2 || rh < 2 {
+        return Err("La región de grabación es demasiado pequeña".into());
+    }
+    let fps = if cfg.fps == 60 { 60 } else { 30 };
+    let indicador_x = mx
+        + (monitor
+            .width()
+            .map_err(|e| e.to_string())?
+            .saturating_sub(220)
+            / 2) as i32;
+    let calidad_maxima = cfg.calidad == "maxima";
+    let detener = Arc::new(AtomicBool::new(false));
+    let ruta_hilo = ruta.clone();
+    let (tx, rxq) = sync_channel::<(f64, xcap::Frame)>(8);
+    let captura_detener = detener.clone();
+    let captura = thread::spawn(move || {
+        let Ok((grabador, rx_frames)) = monitor.video_recorder() else {
+            return;
+        };
+        if grabador.start().is_err() {
+            return;
+        }
+        let inicio = Instant::now();
+        let mut ultimo = None;
+        while !captura_detener.load(Ordering::Relaxed) {
+            if let Ok(frame) = rx_frames.recv_timeout(Duration::from_millis(100)) {
+                let t = inicio.elapsed().as_secs_f64();
+                if !acepta_pts(ultimo, t, fps) {
+                    continue;
+                }
+                ultimo = Some(t);
+                let _ = tx.try_send((t, recortar_frame(frame, region_x, region_y, rw, rh)));
+            }
+        }
+        let _ = grabador.stop();
+    });
+    let codificacion =
+        thread::spawn(move || codificar_cola(rxq, ruta_hilo, rw, rh, fps, calidad_maxima));
+    *guard = Some(Arc::new(Grabacion {
+        inicio: Instant::now(),
+        ruta: ruta.clone(),
+        detener,
+        captura: Some(captura),
+        codificacion: Some(codificacion),
+    }));
+    let _ = (mx, my);
+    abrir_indicador(&app, indicador_x, my)?;
+    emitir_estado(&app, true, 0.0);
+    let emisor = app.clone();
+    thread::spawn(move || {
+        while grabando(&emisor) {
+            thread::sleep(Duration::from_secs(1));
+            if let Ok(s) = estado_video(&emisor) {
+                emitir_estado(&emisor, s.grabando, s.segundos);
+            }
+        }
+    });
+    Ok(())
+}
+
+fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> xcap::Frame {
+    let x = x.max(0) as u32;
+    let y = y.max(0) as u32;
+    let w = w.min(f.width.saturating_sub(x)) & !1;
+    let h = h.min(f.height.saturating_sub(y)) & !1;
+    if x == 0 && y == 0 && f.width == w && f.height == h {
+        return f;
+    }
+    let mut raw = Vec::with_capacity(w as usize * h as usize * 4);
+    for fila in 0..h as usize {
+        let ini = ((y as usize + fila) * f.width as usize + x as usize) * 4;
+        raw.extend_from_slice(&f.raw[ini..ini + w as usize * 4]);
+    }
+    f.width = w;
+    f.height = h;
+    f.raw = raw;
+    f
+}
+
+fn codificar_cola(
+    rx: Receiver<(f64, xcap::Frame)>,
+    ruta: PathBuf,
+    w: u32,
+    h: u32,
+    fps: u32,
+    maxima: bool,
+) -> Result<(), String> {
+    let primero = rx
+        .recv()
+        .map_err(|_| "No se capturó ningún fotograma".to_string())?;
+    let archivo = std::fs::File::create(&ruta).map_err(|e| e.to_string())?;
+    let cfg = configuracion(w, h, fps, maxima);
+    let mut enc =
+        Encoder::with_api_config(OpenH264API::from_source(), cfg).map_err(|e| e.to_string())?;
+    let mut mux = muxide::api::MuxerBuilder::new(archivo)
+        .video(muxide::api::VideoCodec::H264, w, h, fps as f64)
+        .build()
+        .map_err(|e| e.to_string())?;
+    escribir_frame(&mut enc, &mut mux, primero.0, &primero.1)?;
+    while let Ok((pts, frame)) = rx.recv() {
+        escribir_frame(&mut enc, &mut mux, pts, &frame)?;
+    }
+    mux.finish().map_err(|e| e.to_string())
+}
+
+fn configuracion(w: u32, h: u32, fps: u32, maxima: bool) -> EncoderConfig {
+    let factor = if maxima { 0.25 } else { 0.12 };
+    EncoderConfig::new()
+        .usage_type(UsageType::ScreenContentRealTime)
+        .rate_control_mode(RateControlMode::Quality)
+        .bitrate(BitRate::from_bps(
+            (w as f64 * h as f64 * fps as f64 * factor) as u32,
+        ))
+        .max_frame_rate(FrameRate::from_hz(fps as f32))
+        .num_threads(
+            std::thread::available_parallelism()
+                .map(|x| x.get().saturating_sub(1).min(4) as u16)
+                .unwrap_or(1),
+        )
+}
+
+fn escribir_frame(
+    enc: &mut Encoder,
+    mux: &mut muxide::api::Muxer<std::fs::File>,
+    pts: f64,
+    f: &xcap::Frame,
+) -> Result<(), String> {
+    let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(
+        &f.raw,
+        (f.width as usize, f.height as usize),
+    ));
+    let bs = enc.encode(&yuv).map_err(|e| e.to_string())?;
+    let datos = bs.to_vec();
+    if !datos.is_empty() {
+        let clave = matches!(
+            bs.frame_type(),
+            openh264::encoder::FrameType::IDR | openh264::encoder::FrameType::I
+        );
+        mux.write_video(pts, &datos, clave)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+fn abrir_indicador(app: &AppHandle, x: i32, y: i32) -> Result<(), String> {
+    let w = if let Some(w) = app.get_webview_window("grabacion") {
+        w
+    } else {
+        WebviewWindowBuilder::new(app, "grabacion", WebviewUrl::App("grabacion.html".into()))
+            .decorations(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .inner_size(220., 44.)
+            .build()
+            .map_err(|e| e.to_string())?
+    };
+    w.set_position(tauri::PhysicalPosition::new(x, y))
+        .map_err(|e| e.to_string())?;
+    w.show().map_err(|e| e.to_string())
+}
+fn emitir_estado(app: &AppHandle, grabando: bool, segundos: f64) {
+    let _ = app.emit("video-estado", EstadoVideo { grabando, segundos });
+}
+
+pub fn parar(app: AppHandle) -> Result<String, String> {
+    let estado = app.state::<Estado>();
+    let mut guard = estado
+        .grabacion
+        .lock()
+        .map_err(|_| "Estado no disponible".to_string())?;
+    let g = guard.take().ok_or("No hay una grabación en curso")?;
+    let mut g = Arc::try_unwrap(g).map_err(|_| "La grabación sigue en uso".to_string())?;
+    g.detener.store(true, Ordering::Relaxed);
+    if let Some(h) = g.captura.take() {
+        let _ = h.join();
+    }
+    let resultado = g
+        .codificacion
+        .take()
+        .ok_or("No se pudo finalizar la grabación")?
+        .join()
+        .map_err(|_| "Falló el codificador".to_string())?;
+    resultado?;
+    let ruta = g.ruta.to_string_lossy().into_owned();
+    if let Some(w) = app.get_webview_window("grabacion") {
+        let _ = w.close();
+    }
+    emitir_estado(&app, false, g.inicio.elapsed().as_secs_f64());
+    let _ = app.emit("video-guardado", serde_json::json!({"ruta": ruta}));
+    use tauri_plugin_notification::NotificationExt;
+    let _ = app
+        .notification()
+        .builder()
+        .title("Vídeo guardado")
+        .body(
+            std::path::Path::new(&ruta)
+                .file_name()
+                .and_then(|x| x.to_str())
+                .unwrap_or("Vídeo"),
+        )
+        .show();
+    Ok(ruta)
+}
+
+pub fn estado(app: &AppHandle) -> Result<EstadoVideo, String> {
+    estado_video(app)
+}
+fn estado_video(app: &AppHandle) -> Result<EstadoVideo, String> {
+    let e = app.state::<Estado>();
+    let g = e
+        .grabacion
+        .lock()
+        .map_err(|_| "Estado no disponible".to_string())?;
+    Ok(g.as_ref()
+        .map(|x| EstadoVideo {
+            grabando: true,
+            segundos: x.inicio.elapsed().as_secs_f64(),
+        })
+        .unwrap_or(EstadoVideo {
+            grabando: false,
+            segundos: 0.0,
+        }))
+}
+
+pub fn recorte(x: i32, y: i32, w: u32, h: u32) -> (i32, i32, u32, u32) {
+    (x, y, w & !1, h & !1)
+}
+pub fn acepta_pts(ultimo: Option<f64>, actual: f64, fps: u32) -> bool {
+    fps > 0
+        && ultimo
+            .map(|x| actual - x >= 1.0 / fps as f64 - 1e-9)
+            .unwrap_or(true)
+}
+
+#[cfg(test)]
+fn codificar_sinteticos(ruta: &std::path::Path) -> Result<(), String> {
+    let w = 64u32;
+    let h = 48u32;
+    let archivo = std::fs::File::create(ruta).map_err(|e| e.to_string())?;
+    let mut enc =
+        Encoder::with_api_config(OpenH264API::from_source(), configuracion(w, h, 30, false))
+            .map_err(|e| e.to_string())?;
+    let mut mux = muxide::api::MuxerBuilder::new(archivo)
+        .video(muxide::api::VideoCodec::H264, w, h, 30.)
+        .build()
+        .map_err(|e| e.to_string())?;
+    for i in 0..10 {
+        let rgba = vec![(i * 20) as u8; (w * h * 4) as usize];
+        let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(&rgba, (w as usize, h as usize)));
+        let bs = enc.encode(&yuv).map_err(|e| e.to_string())?;
+        let datos = bs.to_vec();
+        if !datos.is_empty() {
+            mux.write_video(i as f64 / 30., &datos, i == 0)
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    mux.finish().map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn pares() {
+        assert_eq!(recorte(1, 2, 5, 7), (1, 2, 4, 6));
+    }
+    #[test]
+    fn ritmo() {
+        assert!(acepta_pts(None, 0., 30));
+        assert!(!acepta_pts(Some(0.), 0.01, 30));
+    }
+    #[test]
+    fn mp4_sintetico() {
+        let p = std::env::temp_dir().join(format!("vitaclip-prueba-{}.mp4", std::process::id()));
+        codificar_sinteticos(&p).expect("codificación");
+        let b = std::fs::read(&p).expect("mp4");
+        assert_eq!(&b[4..8], b"ftyp");
+        let _ = std::fs::remove_file(p);
+    }
+}

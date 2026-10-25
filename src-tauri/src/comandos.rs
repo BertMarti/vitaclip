@@ -1,7 +1,7 @@
 use crate::{
     atajo, boveda, db,
     estado::Estado,
-    ia, licencia,
+    ia,
     pegar::{self, Contenido},
     qr,
 };
@@ -152,33 +152,6 @@ pub fn fragmento_borrar(e: State<'_, Estado>, id: i64) -> Result<(), String> {
     )
 }
 #[tauri::command]
-pub fn acciones_listar(e: State<'_, Estado>) -> Result<Vec<db::Accion>, String> {
-    db::acciones(
-        &*e.db
-            .lock()
-            .map_err(|_| "Base de datos no disponible".to_string())?,
-    )
-}
-#[tauri::command]
-pub fn accion_guardar(e: State<'_, Estado>, accion: db::Accion) -> Result<db::Accion, String> {
-    e.exigir_pro()?;
-    db::accion_guardar(
-        &*e.db
-            .lock()
-            .map_err(|_| "Base de datos no disponible".to_string())?,
-        &accion,
-    )
-}
-#[tauri::command]
-pub fn accion_borrar(e: State<'_, Estado>, id: i64) -> Result<(), String> {
-    db::accion_borrar(
-        &*e.db
-            .lock()
-            .map_err(|_| "Base de datos no disponible".to_string())?,
-        id,
-    )
-}
-#[tauri::command]
 pub fn qr_svg(texto: String) -> Result<String, String> {
     qr::svg(&texto)
 }
@@ -189,12 +162,10 @@ pub async fn ia_ejecutar(
     texto: String,
     extra: Option<String>,
 ) -> Result<String, String> {
-    e.exigir_pro()?;
     ia::ejecutar(&ajustes_desde(&e)?.ia, &accion, &texto, extra.as_deref()).await
 }
 #[tauri::command]
 pub async fn ia_probar(e: State<'_, Estado>) -> Result<String, String> {
-    e.exigir_pro()?;
     ia::probar(&ajustes_desde(&e)?.ia).await
 }
 
@@ -212,8 +183,11 @@ pub fn ajustes_guardar(
     if ajustes.ia.clave.starts_with("••••") {
         ajustes.ia.clave = anterior.ia.clave;
     }
-    if ajustes.atajo != anterior.atajo {
-        atajo::registrar(&app, &ajustes.atajo)?;
+    if ajustes.atajos.popup != anterior.atajos.popup
+        || ajustes.atajos.captura != anterior.atajos.captura
+        || ajustes.atajos.video != anterior.atajos.video
+    {
+        atajo::registrar(&app, &ajustes.atajos)?;
     }
     if ajustes.arrancar_con_sistema != anterior.arrancar_con_sistema {
         use tauri_plugin_autostart::ManagerExt;
@@ -239,47 +213,6 @@ pub fn ajustes_guardar(
     Ok(enmascarar(ajustes))
 }
 #[tauri::command]
-pub fn licencia_estado(e: State<'_, Estado>) -> Result<licencia::EstadoLicencia, String> {
-    e.licencia
-        .lock()
-        .map(|x| x.clone())
-        .map_err(|_| "Estado no disponible".into())
-}
-#[tauri::command]
-pub fn licencia_activar(
-    e: State<'_, Estado>,
-    clave: String,
-) -> Result<licencia::EstadoLicencia, String> {
-    let estado = licencia::estado(Some(&clave), &licencia::hoy());
-    if !estado.pro {
-        return Err(estado
-            .motivo
-            .clone()
-            .unwrap_or("La licencia no es válida.".into()));
-    }
-    let c =
-        e.db.lock()
-            .map_err(|_| "Base de datos no disponible".to_string())?;
-    db::ajuste_guardar(&c, "licencia", &clave)?;
-    *e.licencia
-        .lock()
-        .map_err(|_| "Estado no disponible".to_string())? = estado.clone();
-    Ok(estado)
-}
-#[tauri::command]
-pub fn licencia_quitar(e: State<'_, Estado>) -> Result<licencia::EstadoLicencia, String> {
-    let c =
-        e.db.lock()
-            .map_err(|_| "Base de datos no disponible".to_string())?;
-    db::ajuste_guardar(&c, "licencia", "")?;
-    let estado = licencia::EstadoLicencia::default();
-    *e.licencia
-        .lock()
-        .map_err(|_| "Estado no disponible".to_string())? = estado.clone();
-    Ok(estado)
-}
-
-#[tauri::command]
 pub fn boveda_estado(e: State<'_, Estado>) -> Result<serde_json::Value, String> {
     let existe = !db::ajuste_leer(
         &*e.db
@@ -298,7 +231,6 @@ pub fn boveda_estado(e: State<'_, Estado>) -> Result<serde_json::Value, String> 
 }
 #[tauri::command]
 pub fn boveda_crear(e: State<'_, Estado>, contrasena: String) -> Result<(), String> {
-    e.exigir_pro()?;
     let c =
         e.db.lock()
             .map_err(|_| "Base de datos no disponible".to_string())?;
@@ -319,7 +251,6 @@ pub fn boveda_crear(e: State<'_, Estado>, contrasena: String) -> Result<(), Stri
 }
 #[tauri::command]
 pub fn boveda_desbloquear(e: State<'_, Estado>, contrasena: String) -> Result<(), String> {
-    e.exigir_pro()?;
     let c =
         e.db.lock()
             .map_err(|_| "Base de datos no disponible".to_string())?;
@@ -343,7 +274,6 @@ pub fn boveda_bloquear(e: State<'_, Estado>) -> Result<(), String> {
 }
 #[tauri::command]
 pub fn boveda_listar(e: State<'_, Estado>) -> Result<Vec<db::EntradaBoveda>, String> {
-    e.exigir_pro()?;
     // Ni los títulos se enseñan con la bóveda bloqueada.
     if !e
         .boveda
@@ -365,7 +295,6 @@ pub fn boveda_guardar(
     titulo: String,
     secreto: String,
 ) -> Result<db::EntradaBoveda, String> {
-    e.exigir_pro()?;
     let mut b = e
         .boveda
         .lock()
@@ -383,7 +312,6 @@ pub fn boveda_guardar(
 }
 #[tauri::command]
 pub fn boveda_borrar(e: State<'_, Estado>, id: i64) -> Result<(), String> {
-    e.exigir_pro()?;
     db::boveda_borrar(
         &*e.db
             .lock()
@@ -393,7 +321,6 @@ pub fn boveda_borrar(e: State<'_, Estado>, id: i64) -> Result<(), String> {
 }
 #[tauri::command]
 pub async fn boveda_pegar(app: AppHandle, e: State<'_, Estado>, id: i64) -> Result<bool, String> {
-    e.exigir_pro()?;
     let secreto = db::boveda_secreto(
         &*e.db
             .lock()
@@ -433,7 +360,7 @@ pub fn historial_exportar(app: AppHandle, e: State<'_, Estado>) -> Result<String
         .or_else(|_| app.path().document_dir())
         .map_err(|x| x.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|x| x.to_string())?;
-    let ruta = dir.join(format!("vitaclip-{}.json", licencia::hoy()));
+    let ruta = dir.join(format!("vitaclip-{}.json", crate::util::fecha_hora_local()));
     std::fs::write(&ruta, json).map_err(|x| x.to_string())?;
     Ok(ruta.to_string_lossy().into_owned())
 }
@@ -470,4 +397,198 @@ pub fn ventana_ocultar(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn ajustes_abrir(app: AppHandle, bienvenida: Option<bool>) -> Result<(), String> {
     atajo::abrir_ajustes(&app, bienvenida.unwrap_or(false))
+}
+
+#[tauri::command]
+pub fn captura_iniciar(app: AppHandle, modo: String) -> Result<(), String> {
+    crate::captura::iniciar(app, modo)
+}
+#[tauri::command]
+pub fn captura_info(e: State<'_, Estado>) -> Result<crate::captura::Info, String> {
+    crate::captura::info(&e)
+}
+#[tauri::command]
+pub fn captura_imagen(e: State<'_, Estado>) -> Result<String, String> {
+    crate::captura::imagen(&e)
+}
+#[tauri::command]
+pub fn captura_copiar(app: AppHandle, e: State<'_, Estado>, png: String) -> Result<(), String> {
+    crate::captura::copiar(app, &e, png)
+}
+#[tauri::command]
+pub fn captura_guardar(
+    app: AppHandle,
+    e: State<'_, Estado>,
+    png: String,
+) -> Result<String, String> {
+    crate::captura::guardar(app, &e, png)
+}
+#[tauri::command]
+pub fn captura_cancelar(app: AppHandle, e: State<'_, Estado>) -> Result<(), String> {
+    crate::captura::cerrar(&app, &e);
+    Ok(())
+}
+#[tauri::command]
+pub fn video_iniciar(app: AppHandle, region: Option<crate::video::Region>) -> Result<(), String> {
+    crate::video::iniciar(app, region)
+}
+#[tauri::command]
+pub fn video_parar(app: AppHandle) -> Result<String, String> {
+    crate::video::parar(app)
+}
+#[tauri::command]
+pub fn video_estado(app: AppHandle) -> Result<crate::video::EstadoVideo, String> {
+    crate::video::estado(&app)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CapturaReciente {
+    pub ruta: String,
+    pub nombre: String,
+    pub tipo: String,
+    pub tamano: u64,
+    pub creado: i64,
+}
+fn carpetas(
+    app: &AppHandle,
+    e: &Estado,
+) -> Result<(std::path::PathBuf, std::path::PathBuf), String> {
+    let a = ajustes_desde(e)?;
+    let p = if a.capturas.carpeta.is_empty() {
+        app.path()
+            .picture_dir()
+            .map_err(|x| x.to_string())?
+            .join("Vitaclip")
+    } else {
+        std::path::PathBuf::from(a.capturas.carpeta)
+    };
+    let v = if a.video.carpeta.is_empty() {
+        app.path()
+            .video_dir()
+            .map_err(|x| x.to_string())?
+            .join("Vitaclip")
+    } else {
+        std::path::PathBuf::from(a.video.carpeta)
+    };
+    Ok((p, v))
+}
+#[tauri::command]
+pub fn capturas_recientes(
+    app: AppHandle,
+    e: State<'_, Estado>,
+    limite: u32,
+) -> Result<Vec<CapturaReciente>, String> {
+    let (a, b) = carpetas(&app, &e)?;
+    let mut out = Vec::new();
+    for (d, tipo) in [(a, "imagen"), (b, "video")] {
+        if let Ok(rd) = std::fs::read_dir(d) {
+            for x in rd.flatten() {
+                if let Ok(m) = x.metadata() {
+                    let path = x.path();
+                    let extension = path.extension().and_then(|z| z.to_str()).unwrap_or("");
+                    let válido = (tipo == "imagen" && extension.eq_ignore_ascii_case("png"))
+                        || (tipo == "video" && extension.eq_ignore_ascii_case("mp4"));
+                    if m.is_file() && válido {
+                        out.push(CapturaReciente {
+                            ruta: x.path().to_string_lossy().into_owned(),
+                            nombre: x.file_name().to_string_lossy().into_owned(),
+                            tipo: tipo.into(),
+                            tamano: m.len(),
+                            creado: m
+                                .modified()
+                                .ok()
+                                .and_then(|z| z.duration_since(std::time::UNIX_EPOCH).ok())
+                                .map(|z| z.as_millis() as i64)
+                                .unwrap_or(0),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    out.sort_by_key(|x| std::cmp::Reverse(x.creado));
+    out.truncate(limite as usize);
+    Ok(out)
+}
+#[tauri::command]
+pub fn carpeta_abrir(app: AppHandle, e: State<'_, Estado>, tipo: String) -> Result<(), String> {
+    let (a, b) = carpetas(&app, &e)?;
+    let d = if tipo == "capturas" {
+        a
+    } else if tipo == "videos" {
+        b
+    } else {
+        return Err("Tipo de carpeta no válido".into());
+    };
+    std::fs::create_dir_all(&d).map_err(|x| x.to_string())?;
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_path(d.to_string_lossy(), None::<&str>)
+        .map_err(|x| x.to_string())
+}
+#[tauri::command]
+pub async fn carpeta_elegir(
+    app: AppHandle,
+    e: State<'_, Estado>,
+    tipo: String,
+) -> Result<Option<String>, String> {
+    if tipo != "capturas" && tipo != "videos" {
+        return Err("Tipo de carpeta no válido".into());
+    }
+    use tauri_plugin_dialog::DialogExt;
+    let Some(d) = app.dialog().file().blocking_pick_folder() else {
+        return Ok(None);
+    };
+    let p = d.to_string();
+    let mut a = ajustes_desde(&e)?;
+    if tipo == "capturas" {
+        a.capturas.carpeta = p.clone()
+    } else {
+        a.video.carpeta = p.clone()
+    }
+    let c =
+        e.db.lock()
+            .map_err(|_| "Base de datos no disponible".to_string())?;
+    db::ajuste_guardar(
+        &c,
+        "ajustes",
+        &serde_json::to_string(&a).map_err(|x| x.to_string())?,
+    )?;
+    Ok(Some(p))
+}
+#[tauri::command]
+pub fn archivo_mostrar(app: AppHandle, e: State<'_, Estado>, ruta: String) -> Result<(), String> {
+    let (a, b) = carpetas(&app, &e)?;
+    let p = crate::captura::valida_ruta(std::path::Path::new(&ruta), &[a, b])?;
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .reveal_item_in_dir(p)
+        .map_err(|x| x.to_string())
+}
+#[tauri::command]
+pub fn archivo_copiar_imagen(
+    app: AppHandle,
+    e: State<'_, Estado>,
+    ruta: String,
+) -> Result<(), String> {
+    let a = ajustes_desde(&e)?;
+    let d = if a.capturas.carpeta.is_empty() {
+        app.path()
+            .picture_dir()
+            .map_err(|x| x.to_string())?
+            .join("Vitaclip")
+    } else {
+        std::path::PathBuf::from(a.capturas.carpeta)
+    };
+    let p = crate::captura::valida_ruta(std::path::Path::new(&ruta), &[d])?;
+    if p.extension()
+        .and_then(|x| x.to_str())
+        .map(|x| x.eq_ignore_ascii_case("png"))
+        != Some(true)
+    {
+        return Err("Ruta no permitida".into());
+    }
+    let b = std::fs::read(p).map_err(|x| x.to_string())?;
+    pegar::escribir_imagen(&e, &b)
 }

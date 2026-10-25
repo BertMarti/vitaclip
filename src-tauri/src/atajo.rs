@@ -1,64 +1,231 @@
-use std::str::FromStr;
-use std::sync::{Mutex, OnceLock};
+use crate::{captura, db, video};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
-static REGISTRADO: OnceLock<Mutex<Option<Shortcut>>> = OnceLock::new();
+static REGISTRADOS: OnceLock<Mutex<HashMap<Shortcut, &'static str>>> = OnceLock::new();
+static ULTIMO_MOSTRADO: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
+static ULTIMO_GUARDADO: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
 
-pub fn registrar(app: &AppHandle, clave: &str) -> Result<(), String> {
-    let shortcut = Shortcut::from_str(clave)
-        .map_err(|_| "Ese atajo no es válido o ya lo usa otra aplicación.".to_string())?;
-    app.global_shortcut()
-        .register(shortcut)
-        .map_err(|_| "Ese atajo no es válido o ya lo usa otra aplicación.".to_string())?;
-    let registro = REGISTRADO.get_or_init(|| Mutex::new(None));
-    if let Ok(mut anterior) = registro.lock() {
-        if let Some(viejo) = anterior.replace(shortcut) {
-            let _ = app.global_shortcut().unregister(viejo);
+pub fn registrar(app: &AppHandle, ajustes: &db::Atajos) -> Result<(), String> {
+    let definiciones = [
+        ("popup", &ajustes.popup, "Abrir Vitaclip"),
+        ("captura", &ajustes.captura, "Captura"),
+        ("video", &ajustes.video, "Vídeo"),
+    ];
+    let mut nuevos = HashMap::new();
+    for (accion, texto, nombre) in definiciones {
+        if texto.is_empty() {
+            continue;
+        }
+        let s = Shortcut::from_str(texto).map_err(|_| {
+            format!("El atajo de {nombre} no es válido o ya lo usa otra aplicación.")
+        })?;
+        if nuevos.insert(s, accion).is_some() {
+            return Err("Dos acciones no pueden usar el mismo atajo.".into());
         }
     }
+    let registro = REGISTRADOS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut actual = registro
+        .lock()
+        .map_err(|_| "Atajos no disponibles".to_string())?;
+    let mut registrados = Vec::new();
+    for shortcut in nuevos.keys() {
+        if actual.contains_key(shortcut) {
+            continue;
+        }
+        app.global_shortcut().register(*shortcut).map_err(|_| {
+            for nuevo in registrados.drain(..) {
+                let _ = app.global_shortcut().unregister(nuevo);
+            }
+            let nombre = nuevos.get(shortcut).copied().unwrap_or("Abrir Vitaclip");
+            let texto = match nombre {
+                "captura" => "Captura",
+                "video" => "Vídeo",
+                _ => "Abrir Vitaclip",
+            };
+            format!("El atajo de {texto} no es válido o ya lo usa otra aplicación.")
+        })?;
+        registrados.push(*shortcut);
+    }
+    for shortcut in actual.keys() {
+        if !nuevos.contains_key(shortcut) {
+            let _ = app.global_shortcut().unregister(*shortcut);
+        }
+    }
+    *actual = nuevos;
     Ok(())
 }
+
+pub fn accion_para(shortcut: &Shortcut) -> Option<&'static str> {
+    REGISTRADOS.get()?.lock().ok()?.get(shortcut).copied()
+}
+
+pub fn ejecutar(app: &AppHandle, shortcut: &Shortcut) {
+    match accion_para(shortcut) {
+        Some("popup") => alternar_popup(app),
+        Some("captura") => {
+            let _ = captura::iniciar(app.clone(), "imagen".into());
+        }
+        Some("video") => {
+            if video::grabando(app) {
+                let _ = video::parar(app.clone());
+            } else {
+                let _ = captura::iniciar(app.clone(), "video".into());
+            }
+        }
+        _ => {}
+    }
+}
+
 pub fn mostrar_popup(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("popup") {
-        centrar_en_monitor_del_raton(&w);
+        let _ = ULTIMO_MOSTRADO
+            .get_or_init(|| Mutex::new(None))
+            .lock()
+            .map(|mut x| *x = Some(Instant::now()));
+        let ajustes = app
+            .try_state::<crate::estado::Estado>()
+            .and_then(|e| {
+                e.db.lock()
+                    .ok()
+                    .and_then(|c| db::ajuste_leer(&c, "ajustes").ok().flatten())
+                    .and_then(|x| serde_json::from_str::<db::Ajustes>(&x).ok())
+            })
+            .unwrap_or_default();
+        let _ = w.set_size(tauri::PhysicalSize::new(
+            ajustes.ventana.ancho.max(300),
+            ajustes.ventana.alto.max(320),
+        ));
+        if ajustes.ventana.modo == "recordar" {
+            if let (Some(x), Some(y)) = (ajustes.ventana.x, ajustes.ventana.y) {
+                if !colocar_recordada(&w, x, y) {
+                    colocar_junto_al_raton(&w);
+                }
+            } else {
+                colocar_junto_al_raton(&w);
+            }
+        } else {
+            colocar_junto_al_raton(&w);
+        }
         let _ = w.show();
         let _ = w.set_focus();
         let _ = w.emit("popup-mostrado", ());
-    }
-}
-/// Coloca el popup centrado (un poco por encima de la mitad) en el monitor donde está el ratón.
-fn centrar_en_monitor_del_raton(w: &WebviewWindow) {
-    let (Ok(raton), Ok(tamano)) = (w.cursor_position(), w.outer_size()) else {
-        let _ = w.center();
-        return;
-    };
-    let monitor = w
-        .available_monitors()
-        .unwrap_or_default()
-        .into_iter()
-        .find(|m| {
-            let (p, s) = (m.position(), m.size());
-            raton.x >= f64::from(p.x)
-                && raton.x < f64::from(p.x) + f64::from(s.width)
-                && raton.y >= f64::from(p.y)
-                && raton.y < f64::from(p.y) + f64::from(s.height)
-        });
-    match monitor {
-        Some(m) => {
-            let (p, s) = (m.position(), m.size());
-            let x = p.x + (s.width as i32 - tamano.width as i32) / 2;
-            let y = p.y + (s.height as i32 - tamano.height as i32) / 3;
-            let _ = w.set_position(PhysicalPosition::new(x, y));
-        }
-        None => {
-            let _ = w.center();
+        #[cfg(target_os = "windows")]
+        {
+            let ventana = w.clone();
+            let app = app.clone();
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(60));
+                if !ventana.is_focused().unwrap_or(false) {
+                    let _ = app.run_on_main_thread(move || {
+                        let _ = ventana.set_focus();
+                    });
+                }
+            });
         }
     }
 }
 
+fn colocar_recordada(w: &WebviewWindow, x: i32, y: i32) -> bool {
+    let Ok(monitores) = w.available_monitors() else {
+        return false;
+    };
+    let Ok(tamano) = w.outer_size() else {
+        return false;
+    };
+    if monitores.into_iter().any(|m| {
+        let p = m.position();
+        let s = m.size();
+        x >= p.x
+            && y >= p.y
+            && x + tamano.width as i32 <= p.x + s.width as i32
+            && y + tamano.height as i32 <= p.y + s.height as i32
+    }) {
+        let _ = w.set_position(PhysicalPosition::new(x, y));
+        true
+    } else {
+        false
+    }
+}
+
+pub fn guardar_geometria(app: &AppHandle, w: &WebviewWindow) {
+    let ahora = Instant::now();
+    let bloqueo = ULTIMO_GUARDADO.get_or_init(|| Mutex::new(None));
+    let Ok(mut ultimo) = bloqueo.lock() else {
+        return;
+    };
+    if ultimo
+        .map(|x| ahora.duration_since(x) < Duration::from_secs(1))
+        .unwrap_or(false)
+    {
+        return;
+    }
+    let (Ok(p), Ok(s)) = (w.outer_position(), w.outer_size()) else {
+        return;
+    };
+    let Some(e) = app.try_state::<crate::estado::Estado>() else {
+        return;
+    };
+    let Ok(c) = e.db.lock() else { return };
+    let Ok(Some(valor)) = db::ajuste_leer(&c, "ajustes") else {
+        return;
+    };
+    let Ok(mut a) = serde_json::from_str::<db::Ajustes>(&valor) else {
+        return;
+    };
+    a.ventana.x = Some(p.x);
+    a.ventana.y = Some(p.y);
+    a.ventana.ancho = s.width.max(300);
+    a.ventana.alto = s.height.max(320);
+    if let Ok(serializado) = serde_json::to_string(&a) {
+        let _ = db::ajuste_guardar(&c, "ajustes", &serializado);
+        *ultimo = Some(ahora);
+    }
+}
+
+fn colocar_junto_al_raton(w: &WebviewWindow) {
+    let (Ok(raton), Ok(tamano)) = (w.cursor_position(), w.outer_size()) else {
+        return;
+    };
+    let Ok(monitores) = w.available_monitors() else {
+        return;
+    };
+    if let Some(m) = monitores.into_iter().find(|m| {
+        let p = m.position();
+        let s = m.size();
+        raton.x >= f64::from(p.x)
+            && raton.x < f64::from(p.x + s.width as i32)
+            && raton.y >= f64::from(p.y)
+            && raton.y < f64::from(p.y + s.height as i32)
+    }) {
+        let p = m.position();
+        let s = m.size();
+        let x = (raton.x as i32)
+            .min(p.x + s.width as i32 - tamano.width as i32)
+            .max(p.x);
+        let y = (raton.y as i32)
+            .min(p.y + s.height as i32 - tamano.height as i32)
+            .max(p.y);
+        let _ = w.set_position(PhysicalPosition::new(x, y));
+    }
+}
+
+pub fn foco_permitido() -> bool {
+    ULTIMO_MOSTRADO
+        .get()
+        .and_then(|x| x.lock().ok())
+        .and_then(|x| *x)
+        .map(|t| t.elapsed() >= Duration::from_millis(500))
+        .unwrap_or(true)
+}
 pub fn alternar_popup(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("popup") {
         if w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) {
@@ -72,12 +239,12 @@ pub fn abrir_ajustes(app: &AppHandle, bienvenida: bool) -> Result<(), String> {
     if let Some(w) = app.get_webview_window("ajustes") {
         return w.set_focus().map_err(|e| e.to_string());
     }
-    let pagina = if bienvenida {
+    let p = if bienvenida {
         "ajustes.html#bienvenida"
     } else {
         "ajustes.html"
     };
-    WebviewWindowBuilder::new(app, "ajustes", WebviewUrl::App(pagina.into()))
+    WebviewWindowBuilder::new(app, "ajustes", WebviewUrl::App(p.into()))
         .title("Vitaclip · Ajustes")
         .inner_size(760., 600.)
         .center()

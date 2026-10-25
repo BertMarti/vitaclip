@@ -64,8 +64,75 @@ impl Default for ConfigIa {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
+pub struct Atajos {
+    pub popup: String,
+    pub captura: String,
+    pub video: String,
+}
+
+impl Default for Atajos {
+    fn default() -> Self {
+        Self {
+            popup: "CommandOrControl+Alt+KeyV".into(),
+            captura: "CommandOrControl+Alt+KeyC".into(),
+            video: "CommandOrControl+Alt+KeyR".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Ventana {
+    pub modo: String,
+    pub x: Option<i32>,
+    pub y: Option<i32>,
+    pub ancho: u32,
+    pub alto: u32,
+}
+
+impl Default for Ventana {
+    fn default() -> Self {
+        Self {
+            modo: "raton".into(),
+            x: None,
+            y: None,
+            ancho: 380,
+            alto: 480,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Carpeta {
+    pub carpeta: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Video {
+    pub carpeta: String,
+    pub fps: u32,
+    pub calidad: String,
+}
+
+impl Default for Video {
+    fn default() -> Self {
+        Self {
+            carpeta: String::new(),
+            fps: 30,
+            calidad: "alta".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase", default)]
 pub struct Ajustes {
-    pub atajo: String,
+    pub atajos: Atajos,
+    pub ventana: Ventana,
+    pub capturas: Carpeta,
+    pub video: Video,
     pub tema: String,
     pub idioma: String,
     pub pegar_auto: bool,
@@ -79,19 +146,57 @@ pub struct Ajustes {
 impl Default for Ajustes {
     fn default() -> Self {
         Self {
-            atajo: "CommandOrControl+Alt+KeyV".into(),
+            atajos: Atajos::default(),
+            ventana: Ventana::default(),
+            capturas: Carpeta::default(),
+            video: Video::default(),
             tema: "sistema".into(),
             idioma: "es".into(),
             pegar_auto: true,
             arrancar_con_sistema: false,
             pausado: false,
-            limite_historial: 300,
+            limite_historial: 500,
             ignorar: vec![
                 r"^(?:\d[ -]?){13,19}$".into(),
                 r"^(ghp_|github_pat_|sk-|xox[abp]-|AKIA)[A-Za-z0-9_\-]{8,}".into(),
             ],
             ia: ConfigIa::default(),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Ajustes {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = serde_json::Value::deserialize(d)?;
+        let mut out = Self::default();
+        if let Some(x) = v.get("atajos") {
+            out.atajos = serde_json::from_value(x.clone()).map_err(serde::de::Error::custom)?;
+        }
+        if v.get("atajos").is_none() {
+            if let Some(x) = v.get("atajo").and_then(|x| x.as_str()) {
+                out.atajos.popup = x.into();
+            }
+        }
+        macro_rules! campo {
+            ($nombre:literal, $destino:expr) => {
+                if let Some(x) = v.get($nombre) {
+                    $destino =
+                        serde_json::from_value(x.clone()).map_err(serde::de::Error::custom)?;
+                }
+            };
+        }
+        campo!("ventana", out.ventana);
+        campo!("capturas", out.capturas);
+        campo!("video", out.video);
+        campo!("tema", out.tema);
+        campo!("idioma", out.idioma);
+        campo!("pegarAuto", out.pegar_auto);
+        campo!("arrancarConSistema", out.arrancar_con_sistema);
+        campo!("pausado", out.pausado);
+        campo!("limiteHistorial", out.limite_historial);
+        campo!("ignorar", out.ignorar);
+        campo!("ia", out.ia);
+        Ok(out)
     }
 }
 
@@ -386,12 +491,6 @@ pub fn accion_guardar(c: &Connection, x: &Accion) -> Result<Accion, String> {
     };
     Ok(Accion { id, ..x.clone() })
 }
-pub fn accion_borrar(c: &Connection, id: i64) -> Result<(), String> {
-    c.execute("DELETE FROM acciones WHERE id=?", [id])
-        .map(|_| ())
-        .map_err(|e| e.to_string())
-}
-
 pub fn bovedas(c: &Connection) -> Result<Vec<EntradaBoveda>, String> {
     let mut s = c
         .prepare("SELECT id,titulo,creado FROM boveda ORDER BY id")
