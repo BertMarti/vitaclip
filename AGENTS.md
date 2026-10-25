@@ -8,7 +8,7 @@ interfaz sin build en `src/`, pruebas de JS en `tests/`. El diseño y el contrat
 `docs/specs/2026-10-24-vitaclip-diseno.md`: respétalo al pie de la letra (nombres de comandos, campos y eventos).
 
 ## Comandos
-- Pruebas JS: `node --test tests/` · sintaxis: `npm run check`
+- Pruebas JS: `npm test` · sintaxis: `npm run check`
 - Rust: `cd src-tauri && cargo test` y `cargo clippy -- -D warnings` (si tu entorno no permite cargo, al menos revisa con cuidado los tipos)
 - Abrir la app: `npm run dev`
 

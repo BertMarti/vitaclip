@@ -9,7 +9,7 @@ Reparto en `AGENTS.md` → «Reparto del trabajo». Claude se queda con diseño,
 
 1. Worktree: `git worktree add -q ~/homelab/.wt/vitaclip-<tarea> -b vitaclip-<tarea>` desde el repo.
 2. Encargo CERRADO en `~/homelab/.wt/encargos/encargo-vitaclip-<tarea>.txt`: objetivo, archivos que puede tocar y los que no,
-   contrato exacto (sección 4 del spec), reglas de `AGENTS.md`, comprobaciones (`node --test tests/`, `cargo test`, `cargo clippy`)
+   contrato exacto (sección 4 del spec), reglas de `AGENTS.md`, comprobaciones (`npm test`, `cargo test`, `cargo clippy`)
    y «resume en N líneas». Nada de secretos ni licencias reales.
 3. Lanzar en segundo plano (el perfil `delegado` está en `opencode.json` del repo):
    ```bash

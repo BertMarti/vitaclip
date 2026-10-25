@@ -14,7 +14,7 @@ campos, historial ilimitado). Diseño completo: `docs/specs/2026-10-24-vitaclip-
   `js/herramientas/*.js` (funciones puras: transformar, calcular, generar, color, variables, buscar, acciones).
 - `src-tauri/src/`: `lib.rs` (arranque, plugins, bandeja, ventanas), `estado.rs`, `db.rs` (SQLite), `vigia.rs` (hilo del portapapeles),
   `pegar.rs` (copiar + simular Ctrl/Cmd+V), `atajo.rs`, `licencia.rs`, `boveda.rs`, `ia.rs`, `qr.rs`, `comandos.rs`.
-- `tests/`: pruebas de JS (`node --test tests/`). Las de Rust van en cada módulo (`cargo test`).
+- `tests/`: pruebas de JS (`npm test`). Las de Rust van en cada módulo (`cargo test`).
 - `scripts/licencia.mjs`: emitir licencias con la clave privada, que vive **fuera** del repo (`~/homelab/.claves-vitaclip/`).
 - `.github/workflows/`: `ci.yml` (pruebas en cada push) y `release.yml` (instaladores de los 3 sistemas al subir una etiqueta `v*`).
 
