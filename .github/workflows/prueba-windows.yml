@@ -18,6 +18,10 @@ jobs:
       - name: Pulsar el atajo como un usuario
         shell: pwsh
         run: ./.github/scripts/prueba-atajo-windows.ps1
+      - name: Atajo con Ñ y teclado español
+        if: always()
+        shell: pwsh
+        run: ./.github/scripts/prueba-atajo-windows-es.ps1
       - name: Guardar capturas
         if: always()
         uses: actions/upload-artifact@v4
