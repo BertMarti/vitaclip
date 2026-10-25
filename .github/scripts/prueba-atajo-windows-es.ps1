@@ -2,6 +2,8 @@
 # como un teclado real. Antes de la 0.2, la librería registraba la tecla como si el teclado fuera estadounidense.
 param([string]$Exe = "src-tauri\target\debug\vitaclip.exe")
 $ErrorActionPreference = "Stop"
+# Por si una prueba anterior dejó la app abierta (la segunda instancia se cerraría sola).
+Get-Process vitaclip -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Add-Type @"
 using System;
@@ -37,7 +39,7 @@ Write-Host ("Tecla física 0x27 (Ñ) con teclado español = VK 0x{0:X2}" -f [W]:
 # 2) Primer arranque para crear la base de datos y cerrar.
 $app = Start-Process -FilePath $Exe -PassThru
 Start-Sleep -Seconds 8
-Stop-Process -Id $app.Id -Force
+Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 # 3) Configurar el atajo Ctrl+Shift+Ñ como lo guarda la interfaz.

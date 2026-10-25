@@ -2,6 +2,8 @@
 # pulsa Ctrl+Alt+V como lo haría una persona y comprueba que el popup aparece y sigue visible.
 param([string]$Exe = "src-tauri\target\debug\vitaclip.exe")
 $ErrorActionPreference = "Stop"
+# Por si una prueba anterior dejó la app abierta (la segunda instancia se cerraría sola).
+Get-Process vitaclip -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Add-Type @"
 using System;

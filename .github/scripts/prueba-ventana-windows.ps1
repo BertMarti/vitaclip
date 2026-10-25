@@ -56,13 +56,15 @@ function Arrastrar($x0, $y0, $dx, $dy) {
 }
 
 New-Item -ItemType Directory -Force capturas | Out-Null
+Get-Process vitaclip -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 1
 $app = Start-Process -FilePath $Exe -PassThru
 Start-Sleep -Seconds 8
 $ajustes = [W]::Buscar("Vitaclip · Ajustes")
 if ($ajustes -ne [IntPtr]::Zero) { [System.Windows.Forms.SendKeys]::SendWait("%{F4}"); Start-Sleep -Seconds 1 }
 
 # Abrir el popup en una zona libre de la pantalla.
-[W]::SetCursorPos(300, 200) | Out-Null
+[W]::SetCursorPos(150, 60) | Out-Null
 Start-Process -FilePath $Exe -ArgumentList "--mostrar" | Out-Null
 Start-Sleep -Seconds 3
 $popup = [W]::Buscar("Vitaclip")
@@ -71,20 +73,21 @@ $antes = Rect $popup
 Write-Host "Popup al abrir: $(Texto $antes)"
 Captura "ventana-1-abierta"
 
-# 1) MOVER: arrastrar desde el pie (zona de la pista, a la izquierda), 200 px a la derecha y 120 abajo.
+# 1) MOVER: arrastrar desde el pie (zona de la pista, a la izquierda), 200 px a la derecha y 60 abajo.
+# (El cursor no puede salir de la pantalla del runner, de 1024x768.)
 $px = $antes.L + 30; $py = $antes.B - 10
 Write-Host "Bajo el ratón en el pie ($px,$py): $(Quien $px $py)"
-Arrastrar $px $py 200 120
+Arrastrar $px $py 200 60
 $movida = Rect $popup
 Write-Host "Tras arrastrar el pie: $(Texto $movida) · visible=$([W]::IsWindowVisible($popup))"
 Captura "ventana-2-movida"
-$mueve = ($movida.L - $antes.L) -ge 150 -and ($movida.T - $antes.T) -ge 80
+$mueve = ($movida.L - $antes.L) -ge 150 -and ($movida.T - $antes.T) -ge 40
 
 # 2) MOVER desde la cabecera (hueco entre las pestañas y el engranaje).
 $antes2 = $movida
 $cx = $antes2.L + [int](($antes2.R - $antes2.L) * 0.6); $cy = $antes2.T + 52
 Write-Host "Bajo el ratón en la cabecera ($cx,$cy): $(Quien $cx $cy)"
-Arrastrar $cx $cy -150 -60
+Arrastrar $cx $cy (-150) (-40)
 $movida2 = Rect $popup
 Write-Host "Tras arrastrar la cabecera: $(Texto $movida2) · visible=$([W]::IsWindowVisible($popup))"
 $mueveCabecera = ($antes2.L - $movida2.L) -ge 100
@@ -93,11 +96,11 @@ $mueveCabecera = ($antes2.L - $movida2.L) -ge 100
 $r = Rect $popup
 $ax = $r.R - 6; $ay = $r.B - 6
 Write-Host "Bajo el ratón en el asa ($ax,$ay): $(Quien $ax $ay)"
-Arrastrar $ax $ay 150 100
+Arrastrar $ax $ay 150 (60)
 $grande = Rect $popup
 Write-Host "Tras tirar del asa: $(Texto $grande) · visible=$([W]::IsWindowVisible($popup))"
 Captura "ventana-3-redimensionada"
-$redimensiona = (($grande.R - $grande.L) - ($r.R - $r.L)) -ge 100
+$redimensiona = (($grande.R - $grande.L) - ($r.R - $r.L)) -ge 100 -and (($grande.B - $grande.T) - ($r.B - $r.T)) -ge 40
 
 Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
 Write-Host "RESULTADO: mover desde el pie=$mueve · mover desde la cabecera=$mueveCabecera · redimensionar=$redimensiona"
