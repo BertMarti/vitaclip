@@ -41,3 +41,11 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   `vitaclip --mostrar` desde una segunda instancia abre el popup en la que ya corre, calculadora `=21*1,21` + Enter deja `25,41` copiado.
 - Lo que la app pega por sí misma (huella propia) no se añade como entrada nueva: solo sube si ya existía.
 - En Wayland el atajo global de la app no llega (el sistema no lo permite): se usa un atajo del sistema con `vitaclip --mostrar`.
+
+## Atajo que no saltaba en Windows (2026-10-25)
+- **Causa real** (reproducida en un Windows de GitHub Actions con `prueba-windows.yml`): `global-hotkey` convierte la tecla física en
+  la tecla virtual de un teclado ESTADOUNIDENSE (Semicolon → `VK_OEM_1`), pero con teclado español la Ñ envía `VK_OEM_3` (0xC0).
+  `Ctrl+Shift+Ñ`: 0/3 antes, 3/3 después. `Ctrl+Alt+V` funcionaba siempre (3/3), así que la hipótesis del foco quedó descartada.
+- **Arreglo:** `teclado.rs` traduce con `MapVirtualKeyW` (código de exploración → tecla virtual de la distribución activa) y elige el
+  `Code` que `global-hotkey` convierte en esa tecla virtual. Todo atajo debe pasar por `teclado::adaptar` antes de registrarse.
+- En Linux X11 `global-hotkey` usa keysyms: teclas como la Ñ no se pueden registrar; usar letras, números o F1-F12.
