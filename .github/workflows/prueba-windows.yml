@@ -18,6 +18,10 @@ jobs:
       - name: Pulsar el atajo como un usuario
         shell: pwsh
         run: ./.github/scripts/prueba-atajo-windows.ps1
+      - name: Mover y redimensionar el popup
+        if: always()
+        shell: pwsh
+        run: ./.github/scripts/prueba-ventana-windows.ps1
       - name: Atajo con Ñ y teclado español
         if: always()
         shell: pwsh
