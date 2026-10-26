@@ -90,12 +90,19 @@ Usa el mismo selector de zona:
 ---
 
 ## Bóveda y IA
-- **Bóveda:** guarda datos cifrados con una contraseña maestra. Lo que pegues desde aquí no entra en el historial.
-- **IA:** utiliza modelos para procesar textos. Puedes usar **Ollama** (gratis y local), o servicios como **Groq** y **Gemini** con sus claves gratuitas.
+- **Bóveda:** guarda datos cifrados con una contraseña maestra. Lo que pegues desde aquí no entra en ningún historial (tampoco en
+  el de Windows) y se borra del portapapeles a los 30 segundos.
+- **IA:** utiliza modelos para procesar textos. Puedes usar **Ollama** (gratis y local), o servicios como **Groq** y **Gemini** con
+  sus claves gratuitas. Encima de los botones verás adónde se envía el texto. La clave se guarda en el llavero del sistema
+  (Llavero de macOS, Administrador de credenciales de Windows, Secret Service en Linux), solo viaja por https (o a tu propio
+  equipo) y, si cambias de proveedor, tendrás que volver a escribirla.
 
 ---
 
 ## Ajustes y mantenimiento
+- **Borrar lo antiguo (Ajustes → General):** elige si se borra lo que lleve una semana, un mes, tres meses o un año sin usarse. Lo
+  fijado se queda siempre.
+- **Contraseñas:** lo que copias desde gestores de contraseñas como KeePassXC, 1Password o Bitwarden no se guarda.
 - **Carpetas:** en **Ajustes → Capturas y vídeo** eliges dónde se guardan las capturas y los vídeos (**Elegir…**) y las abres (**Abrir**). Desde la pestaña **Capturas** del popup también puedes abrirlas y ver lo último que has guardado.
 - **Importar/Exportar (Ajustes → Privacidad):** guarda tu historial de textos y tus fragmentos en un archivo JSON (en Descargas) para llevarlos a otro equipo. No incluye imágenes, ajustes ni la bóveda.
 

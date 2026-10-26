@@ -1,0 +1,10 @@
+# cargo deny check advisories (CI). Solo vulnerabilidades: las licencias y duplicados no se comprueban aquí.
+[advisories]
+# Avisos de crates sin mantenimiento solo para las dependencias directas de Vitaclip.
+unmaintained = "workspace"
+yanked = "warn"
+ignore = [
+  # glib 0.18 (VariantStrIter): llega a través de Tauri/GTK3 en Linux y no se puede actualizar hasta que Tauri cambie de
+  # versión de GTK. Vitaclip no usa VariantStrIter.
+  { id = "RUSTSEC-2024-0429", reason = "dependencia de Tauri en Linux; Vitaclip no usa VariantStrIter" },
+]

@@ -5,6 +5,10 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Por defecto, solo lectura; cada trabajo pide lo justo. Las acciones van fijadas a un commit (no a una etiqueta movible).
+permissions:
+  contents: read
+
 jobs:
   compilar:
     permissions:
@@ -14,34 +18,35 @@ jobs:
       matrix:
         include:
           - plataforma: macos-latest
-            args: --target aarch64-apple-darwin
+            args: --target aarch64-apple-darwin -- --locked
           - plataforma: macos-latest
-            args: --target x86_64-apple-darwin
+            args: --target x86_64-apple-darwin -- --locked
           - plataforma: ubuntu-24.04
-            args: ""
+            args: -- --locked
           - plataforma: ubuntu-24.04-arm
-            args: ""
+            args: -- --locked
           - plataforma: windows-latest
-            args: ""
+            args: -- --locked
     runs-on: ${{ matrix.plataforma }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Dependencias del sistema (Linux)
         if: startsWith(matrix.plataforma, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libpipewire-0.3-dev clang libclang-dev libgbm-dev libegl-dev libxcb-randr0-dev libdbus-1-dev patchelf
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
+          toolchain: stable
           targets: ${{ startsWith(matrix.plataforma, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri
       - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -51,3 +56,31 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Sumas SHA-256 de todos los instaladores y atestación de procedencia (se comprueba con `gh attestation verify`).
+  sumas:
+    needs: compilar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Descargar los instaladores del borrador
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir artefactos
+          gh release download "${{ github.ref_name }}" -R "${{ github.repository }}" -D artefactos --skip-existing
+          rm -f artefactos/SHA256SUMS.txt
+      - name: Calcular y subir SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd artefactos
+          sha256sum * > ../SHA256SUMS.txt
+          cat ../SHA256SUMS.txt
+          gh release upload "${{ github.ref_name }}" ../SHA256SUMS.txt -R "${{ github.repository }}" --clobber
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: "artefactos/*"

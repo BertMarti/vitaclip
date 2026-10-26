@@ -57,6 +57,7 @@ ventana:  { modo: "raton" | "recordar", x: i32|null, y: i32|null, ancho: u32 (38
 capturas: { carpeta: "" }                          ("" = Imágenes/Vitaclip)
 video:    { carpeta: "", fps: 30 | 60, calidad: "alta" | "maxima" }   ("" = Vídeos/Vitaclip)
 limiteHistorial: 500   (10..10000)
+retencionDias: 0       (0 = sin límite; borra lo no fijado que lleve ese tiempo sin usarse)
 tema, idioma, pegarAuto, arrancarConSistema, pausado, ignorar, ia   (igual que en la 0.1)
 ```
 Migración: si los ajustes guardados traen el campo antiguo `atajo`, pasa a `atajos.popup`.
@@ -80,6 +81,7 @@ usa otra aplicación.» y deja todos como estaban. Dos acciones con la misma com
 | `archivo_mostrar` | `{ruta}` | `()` (solo rutas dentro de las dos carpetas) |
 | `archivo_copiar_imagen` | `{ruta}` | `()` (solo PNG de la carpeta de capturas) |
 | `ventana_arrastrar` | `{modo: "mover" \| "redimensionar"}` | `()` — mueve o redimensiona (esquina inferior derecha) la ventana que lo pide; mientras dure el arrastre el popup no se oculta al perder el foco (Windows se lo quita) |
+| `abrir_repositorio` | — | `()` — abre github.com/BertMarti/vitaclip (dirección fija en Rust) |
 
 Eventos de Rust: `historial-cambiado`, `popup-mostrado` (como antes), `captura-lista` (a la ventana `captura`, con `captura_info`),
 `video-estado` `{grabando, segundos}` (a todas, cada segundo mientras graba y al cambiar), `video-guardado` `{ruta}` y
@@ -105,3 +107,10 @@ Capacidades: añadir `captura` y `grabacion` a `default.json` y `core:window:all
 - JS: geometría de la selección (normalizar arrastres en cualquier dirección, recortar al borde, escalar a píxeles físicos), herramientas
   de dibujo puras (puntas de flecha), atajos múltiples, textos es/en.
 - CI Windows (`prueba-windows.yml`, manual): compila, arranca, pulsa el atajo con `SendInput` y comprueba que la ventana queda visible.
+
+## 6. Endurecimiento (0.3)
+- Cada ventana tiene su capacidad (`src-tauri/capabilities/<ventana>.json`) con solo los comandos que usa; `build.rs` declara todos
+  los comandos y `tests/capacidades.test.js` comprueba que coinciden con el uso real de cada página.
+- La clave de IA vive en el llavero del sistema (`llavero.rs`); en la base de datos solo si no hay llavero.
+- Borrado seguro (`secure_delete`, checkpoint del WAL, VACUUM al vaciar), archivos 0600 y carpeta 0700; en Windows, datos en Local.
+- Releases con `SHA256SUMS.txt` y atestación de procedencia; acciones fijadas por SHA; `cargo deny check advisories` en el CI.

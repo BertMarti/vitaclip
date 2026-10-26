@@ -44,7 +44,8 @@ La ventana es pequeña, sale junto al ratón y se puede mover y redimensionar. N
 | Linux x64 | `.deb`, `.rpm` o `.AppImage` (`amd64` / `x86_64`) |
 | Linux ARM64 (Raspberry Pi 5…) | `.deb`, `.rpm` o `.AppImage` (`arm64` / `aarch64`) |
 
-La app no está firmada (los certificados de Apple y Microsoft son de pago), así que la primera vez el sistema avisa.
+La app no está firmada (los certificados de Apple y Microsoft son de pago), así que la primera vez el sistema avisa. Cada versión
+trae `SHA256SUMS.txt` y una atestación de GitHub para comprobar que el instalador es auténtico.
 Cómo abrirla igualmente y qué permisos dar: **[guía de instalación](docs/INSTALACION.md)**.
 
 ## Empieza en 30 segundos
@@ -105,8 +106,9 @@ Guía completa: **[docs/USO.md](docs/USO.md)**.
 - Todo se guarda **solo en tu equipo**, en una base de datos SQLite. Sin telemetría, sin cuentas y sin anuncios.
 - **Respeta a los gestores de contraseñas:** lo que copias desde KeePassXC, 1Password, Bitwarden y similares (que lo marcan como secreto) no entra en el historial.
 - Por defecto **no se guardan** números de tarjeta ni claves con pinta de token (`ghp_…`, `sk-…`, `AKIA…`), y puedes añadir tus propios patrones.
-- Puedes **pausar la captura** del portapapeles desde la bandeja.
-- La IA solo se usa si tú la configuras, y solo con el texto que le pidas. Tu clave solo viaja por https (o a tu propio equipo) y nunca se envía a un servidor distinto del que la escribiste.
+- Puedes **pausar la captura** del portapapeles desde la bandeja y elegir que **se borre lo antiguo** (a la semana, al mes…).
+- Al borrar, no queda rastro recuperable en la base de datos, que solo puede leer tu usuario.
+- La IA solo se usa si tú la configuras, y solo con el texto que le pidas. Tu clave se guarda en el llavero del sistema, solo viaja por https (o a tu propio equipo) y nunca se envía a un servidor distinto del que la escribiste.
 
 ## Compilar desde el código
 

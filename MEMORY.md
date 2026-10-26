@@ -23,8 +23,15 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   Concealed/Transient; Linux: x-kde-passwordManagerHint por wl-clipboard-rs o TARGETS de X11) y el vigía no guarda ese contenido;
   verificado en X11 y en el Wayland de la Pi. (A2) Lo pegado desde la bóveda va con `exclude_from_*` de arboard y se borra a los
   30 s. (M1) La clave de IA solo se conserva si la URL no cambia y solo viaja por https o a localhost. (M3) Un recorte de vídeo
-  que no cabe aborta la grabación con aviso en vez de cerrar la app. Pendientes del informe: M2 (llavero del sistema), M4
-  (secure_delete/VACUUM), M5 (permisos de -wal/-shm), M6 (sumas y atestación de las releases), B1, B2 y mejoras de uso.
+  que no cabe aborta la grabación con aviso en vez de cerrar la app. El resto del informe se aplicó en la 0.3.0 (ver abajo).
+- **0.3.0 (26/10): resto de la revisión.** M2 clave de IA en el llavero (`keyring` 3; en la Pi va a gnome-keyring, comprobado con
+  `secret-tool`; migración al arrancar). M4 `secure_delete` + checkpoint TRUNCATE + VACUUM al vaciar. M5 carpeta 0700, base y
+  -wal/-shm 0600 (comprobado); Windows en `%LOCALAPPDATA%` con migración desde Roaming. M6 acciones fijadas por SHA, `--locked`,
+  firma ad hoc en macOS, `SHA256SUMS.txt` + `attest-build-provenance`. B1 las carpetas solo con el diálogo (vaciar sí). B2 imágenes
+  > 64 MiB en crudo se saltan y retención por días. Bajos: capacidades por ventana (prueba en `tests/capacidades.test.js`), CSP de
+  los HTML con `connect-src ipc:`, `create_new` para archivos nuevos, importar sin sobrescribir, `clip` por id, errores de archivos en
+  español, `cargo deny` en el CI (excepción glib justificada en `deny.toml`). Uso: botón del repositorio, macOS 15, AppImage,
+  combobox accesible, destino de la IA y contador de cambios del portapapeles (Windows/macOS).
 - **Mover y redimensionar en Windows (0.2.1):** al empezar un arrastre (`start_dragging`/`start_resize_dragging`) Windows le quita
   el foco a la ventana y el popup, que se oculta al perder el foco, se cerraba y cortaba el movimiento. Ahora lo inicia Rust
   (`ventana_arrastrar`), ignora `Focused(false)` mientras el botón izquierdo siga pulsado (`GetAsyncKeyState`) y devuelve el foco

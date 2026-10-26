@@ -2,6 +2,14 @@
 
 Descarga la versión para tu sistema desde **[Releases](https://github.com/BertMarti/vitaclip/releases/latest)**.
 
+### Comprobar que la descarga es auténtica (opcional)
+Cada versión trae `SHA256SUMS.txt` con la huella de todos los instaladores y una atestación de GitHub que demuestra que se
+compilaron en este repositorio:
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+gh attestation verify Vitaclip_x.y.z_x64-setup.exe -R BertMarti/vitaclip
+```
+
 ## Windows 10 y 11
 1. Descarga `Vitaclip_x.y.z_x64-setup.exe` y ejecútalo.
 2. Si Windows muestra el aviso de SmartScreen, pulsa en **Más información → Ejecutar de todas formas**.
@@ -10,19 +18,26 @@ Descarga la versión para tu sistema desde **[Releases](https://github.com/BertM
 ## macOS
 1. Descarga el archivo según tu procesador: **aarch64** (Apple Silicon M1, M2...) o **x64** (Intel).
 2. Abre el `.dmg` y arrastra **Vitaclip** a la carpeta **Aplicaciones**.
-3. La primera vez, haz **clic derecho → Abrir** sobre la aplicación (no está firmada). Si macOS dice que «está dañada», ejecuta en Terminal:
+3. La primera vez, macOS la bloquea porque no está firmada por Apple:
+   - **macOS 15 (Sequoia) o posterior:** ábrela una vez (saldrá el aviso), ve a **Ajustes del Sistema → Privacidad y seguridad**, baja
+     hasta «Se ha bloqueado Vitaclip» y pulsa **Abrir igualmente**.
+   - **macOS 14 o anterior:** **clic derecho → Abrir → Abrir**.
+   - Si macOS dice que «está dañada», ejecuta en Terminal:
    ```bash
    xattr -cr /Applications/Vitaclip.app
    ```
 4. **Permisos necesarios:**
    - **Accesibilidad:** Ajustes del Sistema → Privacidad y seguridad → Accesibilidad. Activa Vitaclip para permitir el pegado automático.
    - **Grabación de pantalla:** Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla. Activa Vitaclip para poder realizar capturas y grabaciones.
+   - Como la app no tiene una firma de Apple estable, **al actualizar** macOS puede volver a pedir estos permisos: quita Vitaclip de
+     la lista y vuelve a añadirlo si dejan de funcionar.
 
 ## Linux
 Instala el paquete correspondiente a tu distribución:
 - **Debian/Ubuntu:** `sudo apt install ./Vitaclip_*.deb`. Requiere la dependencia `libpipewire-0.3`.
 - **Fedora/SUSE:** `sudo dnf install ./Vitaclip-*.rpm`.
-- **AppImage:** dale permisos de ejecución (`chmod +x`) y ábrelo.
+- **AppImage:** dale permisos de ejecución (`chmod +x`) y ábrelo. La orden `vitaclip` no existe con la AppImage: en los atajos del
+  sistema usa la ruta completa, por ejemplo `~/Aplicaciones/Vitaclip_x.y.z_amd64.AppImage --mostrar`.
 
 ### X11 y Wayland
 - En **X11**, los atajos globales y el pegado automático funcionan directamente.
@@ -45,7 +60,7 @@ Los datos de la aplicación (historial, ajustes, fragmentos) se guardan en:
 
 | Sistema | Ruta de datos |
 |---|---|
-| Windows | `%APPDATA%\com.bertmarti.vitaclip` |
+| Windows | `%LOCALAPPDATA%\com.bertmarti.vitaclip` |
 | macOS | `~/Library/Application Support/com.bertmarti.vitaclip` |
 | Linux | `~/.local/share/com.bertmarti.vitaclip` |
 

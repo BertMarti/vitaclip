@@ -17,7 +17,9 @@ opcional), capturas de pantalla con anotaciones tipo Lightshot y grabación de v
 - `src-tauri/src/`: `lib.rs` (arranque, plugins, bandeja, argumentos), `estado.rs`, `db.rs` (SQLite y ajustes con migración), `vigia.rs`
   (hilo del portapapeles), `pegar.rs`, `atajo.rs` (tres atajos y colocación de la ventana), `teclado.rs` (atajos por tecla física en
   cualquier distribución), `captura.rs` (pantalla congelada + ventana de captura), `video.rs` (xcap → openh264 → MP4 con muxide),
-  `boveda.rs`, `ia.rs`, `qr.rs`, `util.rs`, `comandos.rs`.
+  `boveda.rs`, `ia.rs`, `llavero.rs` (clave de IA en el llavero del sistema), `sensible.rs` (marcas «no guardar» de los
+  gestores de contraseñas), `qr.rs`, `util.rs` (`crear_nuevo`, `error_es`), `comandos.rs`.
+- `src-tauri/capabilities/<ventana>.json`: cada ventana solo puede llamar a los comandos que usa.
 - `tests/`: pruebas de JS (`npm test`). Las de Rust van en cada módulo (`cargo test`).
 - `.github/workflows/`: `ci.yml` (pruebas en cada push), `release.yml` (instaladores al subir una etiqueta `v*`) y `prueba-windows.yml`
   (manual: pulsa los atajos de verdad en un Windows, también con teclado español).
@@ -44,6 +46,8 @@ En la Raspberry (Linux arm64) compilar en release tarda bastante: lánzalo en se
 - Crear ventanas solo desde comandos `async` o hilos (en Windows, crearlas desde un comando síncrono bloquea Tauri). Nada pesado en el
   hilo principal: capturar, grabar y parar un vídeo van en hilos aparte.
 - Todo atajo pasa por `teclado::adaptar` antes de registrarse.
+- Un comando nuevo: añádelo a `generate_handler!`, a `build.rs` y al `capabilities/<ventana>.json` de la ventana que lo use
+  (`npm test` falla si no coinciden). Archivos nuevos con `util::crear_nuevo`, nunca con `File::create` sobre un nombre adivinado.
 - Nada de datos personales en el repo (es público): usa `ana@example.com` y similares en pruebas y ejemplos.
 - Sin telemetría. La única red es la IA que configure el usuario, y la llama Rust (la clave de IA nunca vuelve entera a la interfaz).
 - Dependencias mínimas; nada de frameworks de interfaz.
