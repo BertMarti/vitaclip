@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-archivo-mostrar"
+description = "Enables the archivo_mostrar command without any pre-configured scope."
+commands.allow = ["archivo_mostrar"]
+
+[[permission]]
+identifier = "deny-archivo-mostrar"
+description = "Denies the archivo_mostrar command without any pre-configured scope."
+commands.deny = ["archivo_mostrar"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clip-borrar"
+description = "Enables the clip_borrar command without any pre-configured scope."
+commands.allow = ["clip_borrar"]
+
+[[permission]]
+identifier = "deny-clip-borrar"
+description = "Denies the clip_borrar command without any pre-configured scope."
+commands.deny = ["clip_borrar"]

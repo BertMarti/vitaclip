@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/controles.css">
     <link rel="stylesheet" href="css/popup.css">
@@ -17,7 +17,7 @@
       <header id="cabecera" class="cabecera">
         <div class="busqueda">
           <span id="icono-buscar" class="icono-buscar"></span>
-          <input id="buscador" class="buscador" type="text" autofocus autocomplete="off" spellcheck="false">
+          <input id="buscador" class="buscador" type="text" autofocus autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="lista-resultados">
         </div>
         <nav id="pestanas" class="pestanas" role="tablist"></nav>
       </header>

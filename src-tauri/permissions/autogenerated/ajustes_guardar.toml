@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ajustes-guardar"
+description = "Enables the ajustes_guardar command without any pre-configured scope."
+commands.allow = ["ajustes_guardar"]
+
+[[permission]]
+identifier = "deny-ajustes-guardar"
+description = "Denies the ajustes_guardar command without any pre-configured scope."
+commands.deny = ["ajustes_guardar"]

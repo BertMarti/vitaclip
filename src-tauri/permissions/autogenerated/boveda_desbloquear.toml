@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-boveda-desbloquear"
+description = "Enables the boveda_desbloquear command without any pre-configured scope."
+commands.allow = ["boveda_desbloquear"]
+
+[[permission]]
+identifier = "deny-boveda-desbloquear"
+description = "Denies the boveda_desbloquear command without any pre-configured scope."
+commands.deny = ["boveda_desbloquear"]

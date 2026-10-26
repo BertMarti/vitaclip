@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pausa-cambiar"
+description = "Enables the pausa_cambiar command without any pre-configured scope."
+commands.allow = ["pausa_cambiar"]
+
+[[permission]]
+identifier = "deny-pausa-cambiar"
+description = "Denies the pausa_cambiar command without any pre-configured scope."
+commands.deny = ["pausa_cambiar"]

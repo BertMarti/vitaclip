@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-boveda-crear"
+description = "Enables the boveda_crear command without any pre-configured scope."
+commands.allow = ["boveda_crear"]
+
+[[permission]]
+identifier = "deny-boveda-crear"
+description = "Denies the boveda_crear command without any pre-configured scope."
+commands.deny = ["boveda_crear"]

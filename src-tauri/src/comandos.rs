@@ -417,6 +417,15 @@ pub fn ventana_arrastrar(
     atajo::arrastrar(&app, &ventana, modo == "redimensionar")
 }
 
+/// Abre la página del proyecto en el navegador (dirección fija: la interfaz no puede abrir otras).
+#[tauri::command]
+pub fn abrir_repositorio(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url("https://github.com/BertMarti/vitaclip", None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn pausa_cambiar(e: State<'_, Estado>, pausado: bool) -> Result<(), String> {
     e.pausar(pausado);

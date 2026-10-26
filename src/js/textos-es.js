@@ -97,6 +97,8 @@ export const es = {
   'transformar.htmlDesesc': 'Desescapar HTML',
 
   // IA
+  'ia.destino': 'El texto se envía a {servidor}.',
+  'ia.destinoLocal': 'Se procesa en tu equipo ({servidor}).',
   'ia.titulo': 'IA',
   'ia.traducir': 'Traducir',
   'ia.resumir': 'Resumir',
@@ -261,6 +263,13 @@ export const es = {
   'ajustes.limiteDescripcion': 'Entre 10 y 10 000 entradas. Las fijadas no cuentan y nunca se borran solas.',
   'ajustes.atajos': 'Atajos',
   'ajustes.capturas': 'Capturas y vídeo',
+  'ajustes.retencion': 'Borrar lo antiguo',
+  'ajustes.retencionDescripcion': 'Borra solo lo que lleve ese tiempo sin usarse. Lo fijado se queda siempre.',
+  'retencion.siempre': 'Nunca',
+  'retencion.semana': 'A la semana',
+  'retencion.mes': 'Al mes',
+  'retencion.trimestre': 'A los 3 meses',
+  'retencion.anio': 'Al año',
   'ajustes.ventana': 'Posición de la ventana',
   'ajustes.ventanaDescripcion': 'Dónde aparece Vitaclip al pulsar el atajo.',
   'ventana.raton': 'Junto al ratón',

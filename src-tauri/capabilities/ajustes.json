@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "ajustes",
+  "description": "Ventana de ajustes.",
+  "windows": [
+    "ajustes"
+  ],
+  "permissions": [
+    "core:event:default",
+    "allow-ajustes-guardar",
+    "allow-ajustes-leer",
+    "allow-carpeta-abrir",
+    "allow-carpeta-elegir",
+    "allow-historial-exportar",
+    "allow-historial-importar",
+    "allow-historial-vaciar",
+    "allow-ia-probar",
+    "allow-pausa-cambiar",
+    "allow-ventana-arrastrar",
+    "allow-abrir-repositorio"
+  ]
+}

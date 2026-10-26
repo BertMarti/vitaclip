@@ -119,11 +119,12 @@ function pintar() {
     lista = null;
     panel = null;
     filas = [];
+    nodos.buscador.removeAttribute('aria-activedescendant');
     nodos.contenido.append(el('section', { class: 'pantalla' }, pantalla));
     pintarModo();
     return;
   }
-  lista = el('div', { class: 'lista', attrs: { role: 'listbox', 'aria-label': t(`pestana.${estado.pestana}`) } });
+  lista = el('div', { class: 'lista', attrs: { id: 'lista-resultados', role: 'listbox', 'aria-label': t(`pestana.${estado.pestana}`) } });
   panel = el('section', { class: 'panel-detalle' });
   pintarFilas();
   nodos.contenido.append(el('div', { class: 'zona-lista' }, vista.cabeceraLista?.(), lista), panel);
@@ -140,7 +141,16 @@ function marcarSeleccion() {
     const elegida = indice === estado.indice;
     fila.classList.toggle('seleccionada', elegida);
     fila.setAttribute('aria-selected', String(elegida));
+    fila.id = `opcion-${indice}`;
+    fila.setAttribute('role', 'option');
   });
+  // El lector de pantalla anuncia la fila elegida mientras el foco sigue en el buscador.
+  const elegida = filas[estado.indice];
+  if (elegida) {
+    nodos.buscador.setAttribute('aria-activedescendant', elegida.id);
+  } else {
+    nodos.buscador.removeAttribute('aria-activedescendant');
+  }
   filas[estado.indice]?.scrollIntoView({ block: 'nearest' });
 }
 

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-captura-copiar"
+description = "Enables the captura_copiar command without any pre-configured scope."
+commands.allow = ["captura_copiar"]
+
+[[permission]]
+identifier = "deny-captura-copiar"
+description = "Denies the captura_copiar command without any pre-configured scope."
+commands.deny = ["captura_copiar"]

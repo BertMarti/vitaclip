@@ -1,0 +1,41 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "popup",
+  "description": "Popup del historial: historial, fragmentos, bóveda, IA, capturas recientes.",
+  "windows": [
+    "popup"
+  ],
+  "permissions": [
+    "core:event:default",
+    "allow-ajustes-abrir",
+    "allow-ajustes-leer",
+    "allow-archivo-copiar-imagen",
+    "allow-archivo-mostrar",
+    "allow-boveda-bloquear",
+    "allow-boveda-borrar",
+    "allow-boveda-crear",
+    "allow-boveda-desbloquear",
+    "allow-boveda-estado",
+    "allow-boveda-guardar",
+    "allow-boveda-listar",
+    "allow-boveda-pegar",
+    "allow-captura-iniciar",
+    "allow-capturas-recientes",
+    "allow-carpeta-abrir",
+    "allow-clip-borrar",
+    "allow-clip-fijar",
+    "allow-clip-imagen",
+    "allow-clip-pegar",
+    "allow-fragmento-borrar",
+    "allow-fragmento-guardar",
+    "allow-fragmentos-listar",
+    "allow-historial-listar",
+    "allow-ia-ejecutar",
+    "allow-qr-svg",
+    "allow-texto-pegar",
+    "allow-ventana-arrastrar",
+    "allow-ventana-ocultar",
+    "allow-video-estado",
+    "allow-video-parar"
+  ]
+}

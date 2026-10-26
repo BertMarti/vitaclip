@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fragmento-borrar"
+description = "Enables the fragmento_borrar command without any pre-configured scope."
+commands.allow = ["fragmento_borrar"]
+
+[[permission]]
+identifier = "deny-fragmento-borrar"
+description = "Denies the fragmento_borrar command without any pre-configured scope."
+commands.deny = ["fragmento_borrar"]

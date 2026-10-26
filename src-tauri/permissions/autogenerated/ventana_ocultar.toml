@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ventana-ocultar"
+description = "Enables the ventana_ocultar command without any pre-configured scope."
+commands.allow = ["ventana_ocultar"]
+
+[[permission]]
+identifier = "deny-ventana-ocultar"
+description = "Denies the ventana_ocultar command without any pre-configured scope."
+commands.deny = ["ventana_ocultar"]

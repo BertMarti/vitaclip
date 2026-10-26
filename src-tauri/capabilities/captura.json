@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "captura",
+  "description": "Editor de capturas: solo la pantalla congelada, copiar, guardar y empezar a grabar.",
+  "windows": [
+    "captura"
+  ],
+  "permissions": [
+    "core:event:default",
+    "allow-ajustes-leer",
+    "allow-captura-cancelar",
+    "allow-captura-copiar",
+    "allow-captura-guardar",
+    "allow-captura-imagen",
+    "allow-captura-info",
+    "allow-ventana-arrastrar",
+    "allow-video-iniciar"
+  ]
+}

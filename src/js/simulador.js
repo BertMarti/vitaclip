@@ -267,6 +267,10 @@ const comandos = {
   },
   // En el navegador no hay ventana que mover.
   ventana_arrastrar: () => null,
+  abrir_repositorio: () => {
+    console.info('[simulador] abrir_repositorio');
+    return null;
+  },
   ventana_ocultar: () => {
     console.info('[simulador] ventana_ocultar');
   },

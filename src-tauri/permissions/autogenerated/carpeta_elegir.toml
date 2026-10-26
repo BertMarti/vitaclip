@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-carpeta-elegir"
+description = "Enables the carpeta_elegir command without any pre-configured scope."
+commands.allow = ["carpeta_elegir"]
+
+[[permission]]
+identifier = "deny-carpeta-elegir"
+description = "Denies the carpeta_elegir command without any pre-configured scope."
+commands.deny = ["carpeta_elegir"]

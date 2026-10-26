@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-boveda-pegar"
+description = "Enables the boveda_pegar command without any pre-configured scope."
+commands.allow = ["boveda_pegar"]
+
+[[permission]]
+identifier = "deny-boveda-pegar"
+description = "Denies the boveda_pegar command without any pre-configured scope."
+commands.deny = ["boveda_pegar"]

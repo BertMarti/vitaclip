@@ -4,10 +4,10 @@ import * as api from './api.js';
 import { el, poner } from './dom.js';
 import { t } from './i18n.js';
 import { icono } from './iconos.js';
-import { boton, mensajeError, mostrarError } from './comun.js';
+import { boton, mensajeError, mostrarError, intentar } from './comun.js';
 import {
   datos, pagina, guardar, esperarGuardados, cabeceraSeccion, filaAjuste, grupoAjustes,
-  enlaceExterno, URL_REPO, VERSION,
+  URL_REPO, VERSION,
 } from './ajustes-comun.js';
 
 // Preajustes de proveedores compatibles con la API de OpenAI.
@@ -110,6 +110,10 @@ export function seccionIa() {
 
 // --- Acerca de
 
+function intentarAbrirRepositorio() {
+  return intentar(() => api.abrirRepositorio());
+}
+
 export function seccionAcerca() {
   return [
     cabeceraSeccion('ajustes.acerca', null),
@@ -120,7 +124,7 @@ export function seccionAcerca() {
     ),
     grupoAjustes(
       filaAjuste('acerca.codigo', 'acerca.codigoTexto', el('span', { class: 'chip', text: t('acerca.mit') })),
-      filaAjuste('acerca.repositorio', 'acerca.repositorioTexto', enlaceExterno(URL_REPO, t('acerca.repoTexto'))),
+      filaAjuste('acerca.repositorio', 'acerca.repositorioTexto', boton(t('acerca.repoTexto'), () => intentarAbrirRepositorio(), { clase: 'boton-pequeno', titulo: URL_REPO })),
       filaAjuste('acerca.privacidad', 'acerca.privacidadTexto', icono('escudo')),
     ),
   ];

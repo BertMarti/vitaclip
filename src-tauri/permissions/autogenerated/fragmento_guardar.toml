@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fragmento-guardar"
+description = "Enables the fragmento_guardar command without any pre-configured scope."
+commands.allow = ["fragmento_guardar"]
+
+[[permission]]
+identifier = "deny-fragmento-guardar"
+description = "Denies the fragmento_guardar command without any pre-configured scope."
+commands.deny = ["fragmento_guardar"]

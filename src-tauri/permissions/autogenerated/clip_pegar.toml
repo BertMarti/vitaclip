@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clip-pegar"
+description = "Enables the clip_pegar command without any pre-configured scope."
+commands.allow = ["clip_pegar"]
+
+[[permission]]
+identifier = "deny-clip-pegar"
+description = "Denies the clip_pegar command without any pre-configured scope."
+commands.deny = ["clip_pegar"]

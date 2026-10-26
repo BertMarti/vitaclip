@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-abrir-repositorio"
+description = "Enables the abrir_repositorio command without any pre-configured scope."
+commands.allow = ["abrir_repositorio"]
+
+[[permission]]
+identifier = "deny-abrir-repositorio"
+description = "Denies the abrir_repositorio command without any pre-configured scope."
+commands.deny = ["abrir_repositorio"]

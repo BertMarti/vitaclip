@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-video-parar"
+description = "Enables the video_parar command without any pre-configured scope."
+commands.allow = ["video_parar"]
+
+[[permission]]
+identifier = "deny-video-parar"
+description = "Denies the video_parar command without any pre-configured scope."
+commands.deny = ["video_parar"]

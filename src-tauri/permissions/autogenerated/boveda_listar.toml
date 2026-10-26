@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-boveda-listar"
+description = "Enables the boveda_listar command without any pre-configured scope."
+commands.allow = ["boveda_listar"]
+
+[[permission]]
+identifier = "deny-boveda-listar"
+description = "Denies the boveda_listar command without any pre-configured scope."
+commands.deny = ["boveda_listar"]

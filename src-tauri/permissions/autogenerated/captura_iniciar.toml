@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-captura-iniciar"
+description = "Enables the captura_iniciar command without any pre-configured scope."
+commands.allow = ["captura_iniciar"]
+
+[[permission]]
+identifier = "deny-captura-iniciar"
+description = "Denies the captura_iniciar command without any pre-configured scope."
+commands.deny = ["captura_iniciar"]

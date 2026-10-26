@@ -70,6 +70,8 @@ export const ventanaOcultar = () => invoke('ventana_ocultar');
 // bienvenida = true abre los ajustes en la sección Atajos con el aviso de bienvenida.
 export const ajustesAbrir = (bienvenida = false) => invoke('ajustes_abrir', { bienvenida: Boolean(bienvenida) });
 export const pausaCambiar = pausado => invoke('pausa_cambiar', { pausado });
+// Abre github.com/BertMarti/vitaclip en el navegador (dirección fija en Rust).
+export const abrirRepositorio = () => invoke('abrir_repositorio');
 
 // Mover y redimensionar la ventana sin bordes. Lo hace Rust: así sabe que se está arrastrando y no oculta el popup
 // cuando Windows le quita el foco durante el arrastre.

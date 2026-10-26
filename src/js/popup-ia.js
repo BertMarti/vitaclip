@@ -7,7 +7,7 @@ import { el, poner } from './dom.js';
 import { t } from './i18n.js';
 import { icono } from './iconos.js';
 import { boton, mensajeError, mostrarError } from './comun.js';
-import { pegarTexto } from './popup-estado.js';
+import { pegarTexto, estado } from './popup-estado.js';
 
 const ACCIONES_IA = [
   { id: 'traducir', clave: 'ia.traducir', extra: () => t('ia.destinoTraducir') },
@@ -28,6 +28,22 @@ function trabajoVacio(clipId) {
 
 function titulo() {
   return el('h3', {}, icono('chispa'), t('ia.titulo'));
+}
+
+// Antes de usar la IA, se dice a qué servidor irá el texto (o que se queda en el equipo).
+function destino() {
+  const url = estado.ajustes?.ia?.url ?? '';
+  let servidor = url;
+  try {
+    servidor = new URL(url).host;
+  } catch {
+    // URL incompleta: se enseña tal cual.
+  }
+  if (!servidor) {
+    return null;
+  }
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(servidor);
+  return el('p', { class: 'ia-destino suave', text: t(local ? 'ia.destinoLocal' : 'ia.destino', { servidor }) });
 }
 
 function botonAccion(clip, accion) {
@@ -104,7 +120,7 @@ function repintar() {
   if (!seccion?.isConnected || !seccion.clip) {
     return;
   }
-  poner(seccion, titulo(), contenido(seccion.clip));
+  poner(seccion, titulo(), destino(), contenido(seccion.clip));
   seccion.querySelector('.ia-pegar')?.focus();
 }
 
@@ -131,6 +147,6 @@ export function seccionIa(clip) {
   }
   seccion = el('section', { class: 'seccion seccion-ia' });
   seccion.clip = clip;
-  poner(seccion, titulo(), contenido(clip));
+  poner(seccion, titulo(), destino(), contenido(clip));
   return seccion;
 }

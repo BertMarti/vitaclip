@@ -25,6 +25,7 @@ export const datos = {
     arrancarConSistema: false,
     pausado: false,
     limiteHistorial: LIMITE_DEFECTO,
+    retencionDias: 0,
     ignorar: [],
     ia: { proveedor: 'ollama', url: 'http://localhost:11434/v1', modelo: '', clave: '' },
   },
@@ -129,14 +130,6 @@ export function segmentado(valor, opciones, alCambiar, etiqueta) {
       on: { click: () => alCambiar(id) },
     })),
   );
-}
-
-export function enlaceExterno(url, texto) {
-  return el('a', {
-    href: url,
-    text: texto,
-    attrs: { target: '_blank', rel: 'noopener noreferrer' },
-  });
 }
 
 export function botonCopiar(texto) {

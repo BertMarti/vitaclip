@@ -72,6 +72,12 @@ function controlLimite() {
   });
 }
 
+function selectorRetencion() {
+  const opciones = [['0', 'retencion.siempre'], ['7', 'retencion.semana'], ['30', 'retencion.mes'], ['90', 'retencion.trimestre'], ['365', 'retencion.anio']];
+  const cambiar = valor => guardar({ retencionDias: Number(valor) });
+  return selector(String(datos.ajustes.retencionDias ?? 0), opciones, cambiar, t('ajustes.retencion'));
+}
+
 function selectorVentana() {
   const opciones = [['raton', 'ventana.raton'], ['recordar', 'ventana.recordar']];
   const cambiar = modo => guardar({ ventana: { ...datos.ajustes.ventana, modo } });
@@ -94,6 +100,7 @@ function seccionGeneral() {
     ),
     grupoAjustes(
       filaAjuste('ajustes.limite', 'ajustes.limiteDescripcion', controlLimite()),
+      filaAjuste('ajustes.retencion', 'ajustes.retencionDescripcion', selectorRetencion()),
       filaAjuste('ajustes.ventana', 'ajustes.ventanaDescripcion', selectorVentana()),
     ),
   ];

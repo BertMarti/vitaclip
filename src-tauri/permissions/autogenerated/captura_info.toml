@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-captura-info"
+description = "Enables the captura_info command without any pre-configured scope."
+commands.allow = ["captura_info"]
+
+[[permission]]
+identifier = "deny-captura-info"
+description = "Denies the captura_info command without any pre-configured scope."
+commands.deny = ["captura_info"]

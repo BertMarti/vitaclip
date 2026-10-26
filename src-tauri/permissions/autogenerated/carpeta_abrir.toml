@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-carpeta-abrir"
+description = "Enables the carpeta_abrir command without any pre-configured scope."
+commands.allow = ["carpeta_abrir"]
+
+[[permission]]
+identifier = "deny-carpeta-abrir"
+description = "Denies the carpeta_abrir command without any pre-configured scope."
+commands.deny = ["carpeta_abrir"]

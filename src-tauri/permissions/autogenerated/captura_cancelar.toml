@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-captura-cancelar"
+description = "Enables the captura_cancelar command without any pre-configured scope."
+commands.allow = ["captura_cancelar"]
+
+[[permission]]
+identifier = "deny-captura-cancelar"
+description = "Denies the captura_cancelar command without any pre-configured scope."
+commands.deny = ["captura_cancelar"]

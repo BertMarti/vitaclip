@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clip-imagen"
+description = "Enables the clip_imagen command without any pre-configured scope."
+commands.allow = ["clip_imagen"]
+
+[[permission]]
+identifier = "deny-clip-imagen"
+description = "Denies the clip_imagen command without any pre-configured scope."
+commands.deny = ["clip_imagen"]

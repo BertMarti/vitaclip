@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-texto-pegar"
+description = "Enables the texto_pegar command without any pre-configured scope."
+commands.allow = ["texto_pegar"]
+
+[[permission]]
+identifier = "deny-texto-pegar"
+description = "Denies the texto_pegar command without any pre-configured scope."
+commands.deny = ["texto_pegar"]

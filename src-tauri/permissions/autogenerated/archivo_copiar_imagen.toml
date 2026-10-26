@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-archivo-copiar-imagen"
+description = "Enables the archivo_copiar_imagen command without any pre-configured scope."
+commands.allow = ["archivo_copiar_imagen"]
+
+[[permission]]
+identifier = "deny-archivo-copiar-imagen"
+description = "Denies the archivo_copiar_imagen command without any pre-configured scope."
+commands.deny = ["archivo_copiar_imagen"]

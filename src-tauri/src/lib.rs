@@ -160,7 +160,8 @@ pub fn run() {
             comandos::ventana_ocultar,
             comandos::ajustes_abrir,
             comandos::pausa_cambiar,
-            comandos::ventana_arrastrar
+            comandos::ventana_arrastrar,
+            comandos::abrir_repositorio
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| eprintln!("Error al arrancar Vitaclip: {e}"));
