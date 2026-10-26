@@ -43,7 +43,9 @@ Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 # 3) Configurar el atajo Ctrl+Shift+Ñ como lo guarda la interfaz.
-$db = Join-Path $env:APPDATA "com.bertmarti.vitaclip\vitaclip.db"
+# Desde la 0.3 los datos están en Local (no en Roaming).
+$db = Join-Path $env:LOCALAPPDATA "com.bertmarti.vitaclip\vitaclip.db"
+if (-not (Test-Path $db)) { throw "No encuentro la base de datos en $db" }
 python -c @"
 import json, sqlite3, sys
 c = sqlite3.connect(sys.argv[1])
@@ -56,6 +58,7 @@ c.execute("INSERT OR REPLACE INTO ajustes(clave, valor) VALUES('bienvenida', '1'
 c.commit()
 print('Atajo configurado:', a['atajo'])
 "@ $db
+if ($LASTEXITCODE -ne 0) { throw "No se pudo configurar el atajo de prueba" }
 
 # 4) Arrancar de nuevo, poner el Bloc de notas delante y pulsar Ctrl+Shift + tecla física Ñ.
 $app = Start-Process -FilePath $Exe -PassThru
