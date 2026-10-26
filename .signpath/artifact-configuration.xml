@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Configuración de artefacto para SignPath (cópiala en el proyecto «vitaclip» de SignPath, configuración «initial»).
+     El artefacto es el ZIP que sube GitHub Actions con el instalador NSIS (.exe) y los MSI: se firman todos con Authenticode. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="*.exe" max-matches="unbounded">
+      <authenticode-sign />
+    </pe-file>
+    <msi-file path="*.msi" max-matches="unbounded">
+      <authenticode-sign />
+    </msi-file>
+  </zip-file>
+</artifact-configuration>

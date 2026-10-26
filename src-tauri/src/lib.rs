@@ -221,8 +221,19 @@ fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
     let mut tray = TrayIconBuilder::with_id("vitaclip")
         .menu(&menu)
         .tooltip("Vitaclip");
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
+    // Icono propio de la bandeja: en macOS, plantilla monocroma que el sistema tiñe según el modo claro u oscuro.
+    #[cfg(target_os = "macos")]
+    let icono_bandeja =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/bandeja-plantilla.png"));
+    #[cfg(not(target_os = "macos"))]
+    let icono_bandeja = tauri::image::Image::from_bytes(include_bytes!("../icons/bandeja.png"));
+    match icono_bandeja {
+        Ok(icono) => tray = tray.icon(icono).icon_as_template(cfg!(target_os = "macos")),
+        Err(_) => {
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
+        }
     }
     tray.on_menu_event(move |app, event| match event.id().as_ref() {
         "abrir" => atajo::mostrar_popup(app),

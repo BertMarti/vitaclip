@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <mask id="hueco">
+      <rect width="32" height="32" fill="#fff"/>
+      <rect x="7.5" y="1" width="17" height="7" rx="2" fill="#000"/>
+      <path d="M18.3 8.5 L11.8 18.4 H15.8 L13.9 27 L20.8 16.6 H17 Z" fill="#000"/>
+    </mask>
+  </defs>
+  <g mask="url(#hueco)">
+    <rect x="5" y="4" width="22" height="27" rx="4" fill="#000"/>
+  </g>
+  <rect x="9" y="2" width="14" height="4.5" rx="1.6" fill="#000"/>
+</svg>
