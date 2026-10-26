@@ -44,6 +44,7 @@ xcap = "0.9.8"
 openh264 = "0.9"
 muxide = "0.5"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

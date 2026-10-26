@@ -193,9 +193,9 @@ pub fn guardar(app: AppHandle, e: &Estado, png: String) -> Result<String, String
             PathBuf::from(a.capturas.carpeta)
         }
     };
-    std::fs::create_dir_all(&d).map_err(|e| e.to_string())?;
-    let p = util::nombre_unico(&d, "png");
-    std::fs::write(&p, &bytes).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&d).map_err(|e| util::error_es(&e))?;
+    let (p, mut archivo) = util::crear_nuevo(&d, "png")?;
+    std::io::Write::write_all(&mut archivo, &bytes).map_err(|e| util::error_es(&e))?;
     cerrar(&app, e);
     let _ = img;
     {

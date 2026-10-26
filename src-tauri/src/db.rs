@@ -139,6 +139,8 @@ pub struct Ajustes {
     pub arrancar_con_sistema: bool,
     pub pausado: bool,
     pub limite_historial: u32,
+    /// Días que se conserva lo no fijado sin usar (0 = sin límite).
+    pub retencion_dias: u32,
     pub ignorar: Vec<String>,
     pub ia: ConfigIa,
 }
@@ -156,6 +158,7 @@ impl Default for Ajustes {
             arrancar_con_sistema: false,
             pausado: false,
             limite_historial: 500,
+            retencion_dias: 0,
             ignorar: vec![
                 r"^(?:\d[ -]?){13,19}$".into(),
                 r"^(ghp_|github_pat_|sk-|xox[abp]-|AKIA)[A-Za-z0-9_\-]{8,}".into(),
@@ -194,6 +197,7 @@ impl<'de> Deserialize<'de> for Ajustes {
         campo!("arrancarConSistema", out.arrancar_con_sistema);
         campo!("pausado", out.pausado);
         campo!("limiteHistorial", out.limite_historial);
+        campo!("retencionDias", out.retencion_dias);
         campo!("ignorar", out.ignorar);
         campo!("ia", out.ia);
         Ok(out)
@@ -201,15 +205,49 @@ impl<'de> Deserialize<'de> for Ajustes {
 }
 
 pub fn abrir(ruta: &Path) -> Result<Connection, String> {
+    // En Unix el archivo nace ya con permisos 0600 (solo el usuario), antes de que SQLite escriba nada.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .mode(0o600)
+            .open(ruta)
+            .map_err(|e| crate::util::error_es(&e))?;
+    }
     let conexion = Connection::open(ruta).map_err(|e| e.to_string())?;
     inicializar(&conexion)?;
+    proteger_archivos(ruta);
+    Ok(conexion)
+}
+
+/// Permisos 0600 para la base de datos y sus archivos auxiliares (-wal, -shm), que SQLite crea con los permisos por defecto.
+fn proteger_archivos(ruta: &Path) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(ruta, std::fs::Permissions::from_mode(0o600))
+        let base = ruta.as_os_str().to_owned();
+        for sufijo in ["", "-wal", "-shm"] {
+            let mut nombre = base.clone();
+            nombre.push(sufijo);
+            let _ = std::fs::set_permissions(&nombre, std::fs::Permissions::from_mode(0o600));
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = ruta;
+}
+
+/// Tras borrar: vuelca el diario WAL y lo deja a cero para que lo borrado no quede recuperable en él.
+/// Con `compactar`, además reconstruye el archivo (VACUUM) para no dejar páginas libres con datos antiguos.
+fn limpiar_rastro(c: &Connection, compactar: bool) -> Result<(), String> {
+    c.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+        .map_err(|e| e.to_string())?;
+    if compactar {
+        c.execute_batch("VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
             .map_err(|e| e.to_string())?;
     }
-    Ok(conexion)
+    Ok(())
 }
 
 #[cfg_attr(not(test), allow(dead_code))]
@@ -221,7 +259,8 @@ pub fn abrir_memoria() -> Result<Connection, String> {
 
 fn inicializar(c: &Connection) -> Result<(), String> {
     c.execute_batch(
-        "PRAGMA journal_mode=WAL;
+        "PRAGMA secure_delete=ON;
+         PRAGMA journal_mode=WAL;
          CREATE TABLE IF NOT EXISTS clips(
            id INTEGER PRIMARY KEY, tipo TEXT NOT NULL, texto TEXT NOT NULL DEFAULT '',
            imagen BLOB, ancho INTEGER, alto INTEGER, huella TEXT NOT NULL UNIQUE,
@@ -381,8 +420,8 @@ pub fn fijar(c: &Connection, id: i64, valor: bool) -> Result<(), String> {
 }
 pub fn borrar(c: &Connection, id: i64) -> Result<(), String> {
     c.execute("DELETE FROM clips WHERE id=?", [id])
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    limpiar_rastro(c, false)
 }
 pub fn vaciar(c: &Connection, incluir_fijados: bool) -> Result<(), String> {
     c.execute(
@@ -393,7 +432,45 @@ pub fn vaciar(c: &Connection, incluir_fijados: bool) -> Result<(), String> {
         },
         [],
     )
-    .map(|_| ())
+    .map_err(|e| e.to_string())?;
+    limpiar_rastro(c, true)
+}
+
+/// Retención: borra lo no fijado que no se ha usado en `dias` días (0 = sin límite). Devuelve cuántos borró.
+pub fn purgar_antiguos(c: &Connection, dias: u32, ahora: i64) -> Result<usize, String> {
+    if dias == 0 {
+        return Ok(0);
+    }
+    let limite = ahora - i64::from(dias) * 86_400_000;
+    let borrados = c
+        .execute("DELETE FROM clips WHERE fijado=0 AND usado < ?1", [limite])
+        .map_err(|e| e.to_string())?;
+    if borrados > 0 {
+        limpiar_rastro(c, false)?;
+    }
+    Ok(borrados)
+}
+
+/// Un solo clip por id (sin cargar todo el historial).
+pub fn clip(c: &Connection, id: i64) -> Result<Option<Clip>, String> {
+    c.query_row(
+        "SELECT id,tipo,texto,ancho,alto,creado,usado,usos,fijado FROM clips WHERE id=?",
+        [id],
+        |r| {
+            Ok(Clip {
+                id: r.get(0)?,
+                tipo: r.get(1)?,
+                texto: r.get(2)?,
+                ancho: r.get(3)?,
+                alto: r.get(4)?,
+                creado: r.get(5)?,
+                usado: r.get(6)?,
+                usos: r.get(7)?,
+                fijado: r.get::<_, i64>(8)? != 0,
+            })
+        },
+    )
+    .optional()
     .map_err(|e| e.to_string())
 }
 
@@ -541,8 +618,8 @@ pub fn boveda_secreto(c: &Connection, id: i64) -> Result<Option<Vec<u8>>, String
 }
 pub fn boveda_borrar(c: &Connection, id: i64) -> Result<(), String> {
     c.execute("DELETE FROM boveda WHERE id=?", [id])
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    limpiar_rastro(c, false)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -589,8 +666,9 @@ pub fn importar(c: &Connection, json: &str) -> Result<u32, String> {
             total += 1;
         }
     }
+    // Siempre como fragmentos nuevos (id 0): importar nunca sobrescribe los que ya tienes.
     for f in datos.fragmentos {
-        fragmento_guardar(c, &f)?;
+        fragmento_guardar(c, &Fragmento { id: 0, ..f })?;
     }
     for a in datos.acciones {
         accion_guardar(c, &a)?;
@@ -648,5 +726,55 @@ mod tests {
         let a: Ajustes = serde_json::from_str("{}").unwrap();
         assert_eq!(a.idioma, "es");
         assert_eq!(a.ia.modelo, "llama3.2");
+    }
+
+    #[test]
+    fn retencion_borra_lo_antiguo_no_fijado() {
+        let c = db();
+        guardar_texto(&c, "viejo", 1_000, 100).unwrap();
+        guardar_texto(&c, "viejo fijado", 1_000, 100).unwrap();
+        let fijado = c.last_insert_rowid();
+        fijar(&c, fijado, true).unwrap();
+        let ahora = 1_000 + 31 * 86_400_000;
+        guardar_texto(&c, "reciente", ahora, 100).unwrap();
+        assert_eq!(purgar_antiguos(&c, 0, ahora).unwrap(), 0);
+        assert_eq!(purgar_antiguos(&c, 30, ahora).unwrap(), 1);
+        let textos: Vec<String> = listar(&c, "", 10)
+            .unwrap()
+            .into_iter()
+            .map(|x| x.texto)
+            .collect();
+        assert!(
+            textos.contains(&"viejo fijado".to_string())
+                && textos.contains(&"reciente".to_string())
+        );
+        assert!(!textos.contains(&"viejo".to_string()));
+    }
+
+    #[test]
+    fn clip_por_id_e_importar_no_sobrescribe_fragmentos() {
+        let c = db();
+        guardar_texto(&c, "hola", 1, 10).unwrap();
+        let id = c.last_insert_rowid();
+        assert_eq!(clip(&c, id).unwrap().map(|x| x.texto), Some("hola".into()));
+        assert!(clip(&c, 999).unwrap().is_none());
+        let f = fragmento_guardar(
+            &c,
+            &Fragmento {
+                id: 0,
+                nombre: "a".into(),
+                abreviatura: "a".into(),
+                contenido: "uno".into(),
+            },
+        )
+        .unwrap();
+        let json = format!(
+            r#"{{"version":1,"clips":[],"fragmentos":[{{"id":{},"nombre":"b","abreviatura":"b","contenido":"dos"}}],"acciones":[]}}"#,
+            f.id
+        );
+        importar(&c, &json).unwrap();
+        let todos = fragmentos(&c).unwrap();
+        assert_eq!(todos.len(), 2);
+        assert!(todos.iter().any(|x| x.contenido == "uno"));
     }
 }

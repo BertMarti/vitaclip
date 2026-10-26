@@ -104,8 +104,8 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
         return Err("Ya hay una grabación en curso".into());
     }
     let (dir, cfg) = carpetas(&app)?;
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let ruta = util::nombre_unico(&dir, "mp4");
+    std::fs::create_dir_all(&dir).map_err(|e| util::error_es(&e))?;
+    let (ruta, archivo) = util::crear_nuevo(&dir, "mp4")?;
     let (mx, my, monitor) = {
         let popup = app.get_webview_window("popup");
         let p = monitor_elegido
@@ -201,7 +201,7 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
         let _ = grabador.stop();
     });
     let codificacion =
-        thread::spawn(move || codificar_cola(rxq, ruta_hilo, rw, rh, fps, calidad_maxima));
+        thread::spawn(move || codificar_cola(rxq, archivo, ruta_hilo, rw, rh, fps, calidad_maxima));
     *guard = Some(Arc::new(Grabacion {
         inicio: Instant::now(),
         ruta: ruta.clone(),
@@ -248,18 +248,22 @@ fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> Option<
     Some(f)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn codificar_cola(
     rx: Receiver<(f64, xcap::Frame)>,
+    archivo: std::fs::File,
     ruta: PathBuf,
     w: u32,
     h: u32,
     fps: u32,
     maxima: bool,
 ) -> Result<(), String> {
-    let primero = rx
-        .recv()
-        .map_err(|_| "No se capturó ningún fotograma".to_string())?;
-    let archivo = std::fs::File::create(&ruta).map_err(|e| e.to_string())?;
+    let Ok(primero) = rx.recv() else {
+        // Sin fotogramas no hay vídeo: se borra el archivo vacío que se reservó al empezar.
+        drop(archivo);
+        let _ = std::fs::remove_file(&ruta);
+        return Err("No se capturó ningún fotograma".to_string());
+    };
     let cfg = configuracion(w, h, fps, maxima);
     let mut enc =
         Encoder::with_api_config(OpenH264API::from_source(), cfg).map_err(|e| e.to_string())?;

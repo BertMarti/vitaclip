@@ -73,10 +73,7 @@ pub async fn clip_pegar(app: AppHandle, e: State<'_, Estado>, id: i64) -> Result
         let c =
             e.db.lock()
                 .map_err(|_| "Base de datos no disponible".to_string())?;
-        let clip = db::listar(&c, "", u32::MAX)?
-            .into_iter()
-            .find(|x| x.id == id)
-            .ok_or("Clip no encontrado")?;
+        let clip = db::clip(&c, id)?.ok_or("Clip no encontrado")?;
         db::marcar_usado(&c, id, ahora())?;
         if clip.tipo == "imagen" {
             Contenido::Imagen(db::imagen_png(&c, id)?.ok_or("Imagen no encontrada")?)
@@ -162,16 +159,29 @@ pub async fn ia_ejecutar(
     texto: String,
     extra: Option<String>,
 ) -> Result<String, String> {
-    ia::ejecutar(&ajustes_desde(&e)?.ia, &accion, &texto, extra.as_deref()).await
+    ia::ejecutar(
+        &ajustes_con_clave(&e)?.ia,
+        &accion,
+        &texto,
+        extra.as_deref(),
+    )
+    .await
 }
 #[tauri::command]
 pub async fn ia_probar(e: State<'_, Estado>) -> Result<String, String> {
-    ia::probar(&ajustes_desde(&e)?.ia).await
+    ia::probar(&ajustes_con_clave(&e)?.ia).await
+}
+
+/// Ajustes con la clave de IA real (de la base de datos o del llavero del sistema). Solo para usar dentro de Rust.
+fn ajustes_con_clave(e: &Estado) -> Result<db::Ajustes, String> {
+    let mut a = ajustes_desde(e)?;
+    a.ia.clave = crate::llavero::clave_efectiva(&a);
+    Ok(a)
 }
 
 #[tauri::command]
 pub fn ajustes_leer(e: State<'_, Estado>) -> Result<db::Ajustes, String> {
-    Ok(enmascarar(ajustes_desde(&e)?))
+    Ok(enmascarar(ajustes_con_clave(&e)?))
 }
 #[tauri::command]
 pub fn ajustes_guardar(
@@ -179,7 +189,16 @@ pub fn ajustes_guardar(
     e: State<'_, Estado>,
     mut ajustes: db::Ajustes,
 ) -> Result<db::Ajustes, String> {
-    let anterior = ajustes_desde(&e)?;
+    let anterior = ajustes_con_clave(&e)?;
+    // Las carpetas de capturas y vídeos solo se cambian con el diálogo del sistema (carpeta_elegir): así ningún código de la
+    // interfaz puede ampliar las carpetas de las que archivo_copiar_imagen y archivo_mostrar aceptan rutas.
+    // Volver a la carpeta por defecto (vacía) sí se permite.
+    if !ajustes.capturas.carpeta.is_empty() {
+        ajustes.capturas.carpeta = anterior.capturas.carpeta.clone();
+    }
+    if !ajustes.video.carpeta.is_empty() {
+        ajustes.video.carpeta = anterior.video.carpeta.clone();
+    }
     // La geometría de la ventana la guarda Rust al moverla; de la interfaz solo vale el modo.
     let modo = std::mem::take(&mut ajustes.ventana.modo);
     ajustes.ventana = anterior.ventana.clone();
@@ -212,6 +231,9 @@ pub fn ajustes_guardar(
                 .map_err(|x| format!("No se pudo desactivar el arranque automático: {x}"))?;
         }
     }
+    // La clave va al llavero del sistema; a la base de datos solo si no hay llavero.
+    let devolver = enmascarar(ajustes.clone());
+    crate::llavero::sacar_clave(&mut ajustes);
     let c =
         e.db.lock()
             .map_err(|_| "Base de datos no disponible".to_string())?;
@@ -221,7 +243,7 @@ pub fn ajustes_guardar(
         &serde_json::to_string(&ajustes).map_err(|x| x.to_string())?,
     )?;
     e.pausar(ajustes.pausado);
-    Ok(enmascarar(ajustes))
+    Ok(devolver)
 }
 #[tauri::command]
 pub fn boveda_estado(e: State<'_, Estado>) -> Result<serde_json::Value, String> {
@@ -370,9 +392,10 @@ pub fn historial_exportar(app: AppHandle, e: State<'_, Estado>) -> Result<String
         .download_dir()
         .or_else(|_| app.path().document_dir())
         .map_err(|x| x.to_string())?;
-    std::fs::create_dir_all(&dir).map_err(|x| x.to_string())?;
-    let ruta = dir.join(format!("vitaclip-{}.json", crate::util::fecha_hora_local()));
-    std::fs::write(&ruta, json).map_err(|x| x.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|x| crate::util::error_es(&x))?;
+    let (ruta, mut archivo) = crate::util::crear_nuevo(&dir, "json")?;
+    std::io::Write::write_all(&mut archivo, json.as_bytes())
+        .map_err(|x| crate::util::error_es(&x))?;
     Ok(ruta.to_string_lossy().into_owned())
 }
 #[tauri::command]

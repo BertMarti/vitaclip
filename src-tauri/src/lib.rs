@@ -5,6 +5,7 @@ mod comandos;
 mod db;
 mod estado;
 mod ia;
+mod llavero;
 mod pegar;
 mod qr;
 mod sensible;
@@ -45,12 +46,21 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let dir = carpeta_datos(app.handle())?;
             let conexion = db::abrir(&dir.join("vitaclip.db"))?;
             let ajustes = db::ajuste_leer(&conexion, "ajustes")?
                 .and_then(|x| serde_json::from_str::<db::Ajustes>(&x).ok())
                 .unwrap_or_default();
+            // Migración: una clave de IA guardada en la base de datos por una versión anterior pasa al llavero del sistema.
+            if !ajustes.ia.clave.is_empty() {
+                let mut sin_clave = ajustes.clone();
+                llavero::sacar_clave(&mut sin_clave);
+                if sin_clave.ia.clave.is_empty() {
+                    if let Ok(json) = serde_json::to_string(&sin_clave) {
+                        let _ = db::ajuste_guardar(&conexion, "ajustes", &json);
+                    }
+                }
+            }
             app.manage(estado::Estado::new(conexion, ajustes.pausado));
             if atajo::registrar(app.handle(), &ajustes.atajos).is_err() {
                 let _ = atajo::abrir_ajustes(app.handle(), true);
@@ -96,6 +106,7 @@ pub fn run() {
                 });
             }
             vigia::iniciar(app.handle().clone());
+            vigia::iniciar_retencion(app.handle().clone());
             construir_bandeja(app)?;
             if std::env::args().any(|x| x == "--captura") {
                 captura::iniciar_en_hilo(app.handle().clone(), "imagen");
@@ -153,6 +164,39 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| eprintln!("Error al arrancar Vitaclip: {e}"));
+}
+
+/// Carpeta de datos: solo para el usuario (0700 en Unix). En Windows va en Local y no en Roaming, para que el historial no
+/// viaje con los perfiles móviles; si hay datos de una versión anterior en Roaming, se mueven.
+fn carpeta_datos(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(windows)]
+    let dir = {
+        let local = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+        let roaming = app.path().app_data_dir().map_err(|e| e.to_string())?;
+        if local != roaming
+            && !local.join("vitaclip.db").exists()
+            && roaming.join("vitaclip.db").exists()
+        {
+            std::fs::create_dir_all(&local).map_err(|e| util::error_es(&e))?;
+            for nombre in ["vitaclip.db", "vitaclip.db-wal", "vitaclip.db-shm"] {
+                let (origen, destino) = (roaming.join(nombre), local.join(nombre));
+                if origen.exists() && std::fs::rename(&origen, &destino).is_err() {
+                    std::fs::copy(&origen, &destino).map_err(|e| util::error_es(&e))?;
+                    let _ = std::fs::remove_file(&origen);
+                }
+            }
+        }
+        local
+    };
+    #[cfg(not(windows))]
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|e| util::error_es(&e))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+    }
+    Ok(dir)
 }
 
 fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {

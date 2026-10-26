@@ -5,16 +5,63 @@ use regex::Regex;
 use std::{thread, time::Duration};
 use tauri::{AppHandle, Emitter, Manager};
 
+/// Tamaño máximo en crudo (RGBA) de una imagen para guardarla: 64 MiB ≈ 4096×4096.
+const MAX_BYTES_IMAGEN_CRUDA: u64 = 64 * 1024 * 1024;
+
+/// Contador de cambios del portapapeles que da el sistema (Windows y macOS): si no ha cambiado, no hace falta leerlo.
+#[cfg(windows)]
+fn contador_cambios() -> Option<u64> {
+    // SAFETY: función de Win32 sin argumentos.
+    Some(u64::from(unsafe {
+        windows_sys::Win32::System::DataExchange::GetClipboardSequenceNumber()
+    }))
+}
+
+#[cfg(target_os = "macos")]
+fn contador_cambios() -> Option<u64> {
+    Some(objc2_app_kit::NSPasteboard::generalPasteboard().changeCount() as u64)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn contador_cambios() -> Option<u64> {
+    None
+}
+
+/// Retención por días: al arrancar (tras un minuto) y luego cada hora, borra lo no fijado que lleve demasiado sin usarse.
+pub fn iniciar_retencion(app: AppHandle) {
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(60));
+        loop {
+            if let Some(estado) = app.try_state::<Estado>() {
+                if let Ok(c) = estado.db.lock() {
+                    let dias = db::ajustes(&c).retencion_dias;
+                    if matches!(db::purgar_antiguos(&c, dias, util::ahora()), Ok(n) if n > 0) {
+                        let _ = app.emit("historial-cambiado", ());
+                    }
+                }
+            }
+            thread::sleep(Duration::from_secs(3600));
+        }
+    });
+}
+
 pub fn iniciar(app: AppHandle) {
     thread::spawn(move || {
         let mut ultima: Option<String> = None;
         // Huella de los píxeles crudos de la última imagen vista: evita recodificar a PNG cada 400 ms.
         let mut ultima_cruda: Option<String> = None;
+        let mut ultimo_contador: Option<u64> = None;
         let mut espera = Duration::from_millis(400);
         let mut patrones_fuente: Vec<String> = Vec::new();
         let mut patrones: Vec<Regex> = Vec::new();
         loop {
             thread::sleep(espera);
+            // Si el sistema dice que el portapapeles no ha cambiado, no se lee (ahorra CPU en Windows y macOS).
+            // Se da por leído solo cuando la lectura sale bien (si otra app tenía el portapapeles abierto, se reintenta).
+            let contador = contador_cambios();
+            if contador.is_some() && contador == ultimo_contador {
+                continue;
+            }
             let Some(estado) = app.try_state::<Estado>() else {
                 continue;
             };
@@ -49,6 +96,10 @@ pub fn iniciar(app: AppHandle) {
                     continue;
                 }
                 ultima_cruda = Some(cruda);
+                // Una imagen gigantesca se salta antes de codificarla (codificar 16k×16k pediría ~1 GB de memoria).
+                if (width as u64) * (height as u64) * 4 > MAX_BYTES_IMAGEN_CRUDA {
+                    continue;
+                }
                 let mut png = Vec::new();
                 if image::codecs::png::PngEncoder::new(&mut png)
                     .write_image(
@@ -66,6 +117,7 @@ pub fn iniciar(app: AppHandle) {
                 continue;
             };
             espera = Duration::from_millis(400);
+            ultimo_contador = contador;
             let huella = db::huella(&bytes);
             if ultima.as_ref() == Some(&huella) {
                 continue;
