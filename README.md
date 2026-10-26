@@ -47,6 +47,7 @@ La ventana es pequeña, sale junto al ratón y se puede mover y redimensionar. N
 La app no está firmada (los certificados de Apple y Microsoft son de pago), así que la primera vez el sistema avisa. Cada versión
 trae `SHA256SUMS.txt` y una atestación de GitHub para comprobar que el instalador es auténtico.
 Cómo abrirla igualmente y qué permisos dar: **[guía de instalación](docs/INSTALACION.md)**.
+Por qué sale ese aviso y cómo se quitará con la firma de código: **[docs/FIRMA.md](docs/FIRMA.md)**.
 
 ## Empieza en 30 segundos
 

@@ -12,7 +12,9 @@ gh attestation verify Vitaclip_x.y.z_x64-setup.exe -R BertMarti/vitaclip
 
 ## Windows 10 y 11
 1. Descarga `Vitaclip_x.y.z_x64-setup.exe` y ejecútalo.
-2. Si Windows muestra el aviso de SmartScreen, pulsa en **Más información → Ejecutar de todas formas**.
+2. Si Windows muestra el aviso de SmartScreen («Windows protegió su PC»), pulsa en **Más información → Ejecutar de todas formas**.
+   No significa que sea un virus: avisa porque aún no está firmado ([más información](FIRMA.md)).
+   El instalador es **para tu usuario**: no pide permisos de administrador.
 3. Al finalizar, Vitaclip aparecerá en la bandeja del sistema (junto al reloj).
 
 ## macOS
