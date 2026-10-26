@@ -89,3 +89,16 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - **Arreglo:** `teclado.rs` traduce con `MapVirtualKeyW` (código de exploración → tecla virtual de la distribución activa) y elige el
   `Code` que `global-hotkey` convierte en esa tecla virtual. Todo atajo debe pasar por `teclado::adaptar` antes de registrarse.
 - En Linux X11 `global-hotkey` usa keysyms: teclas como la Ñ no se pueden registrar; usar letras, números o F1-F12.
+
+## Empaquetado y firma (2026-10-26, v0.3.1)
+- **El aviso de Windows es SmartScreen, no un virus:** Defender (firmas del 26/10) no encontró nada en el `.exe` ni en el `.msi`
+  (`prueba-windows.yml` los analiza en cada pasada). Solo se quita con firma Authenticode + reputación. Un certificado autofirmado no
+  sirve.
+- **Firma gratuita con SignPath Foundation:** `release.yml` firma `.exe` y `.msi` solo si existe la variable
+  `SIGNPATH_ORGANIZATION_ID` (y el secret `SIGNPATH_API_TOKEN`); sin ellas publica sin firmar. La solicitud (signpath.org/apply) la
+  tiene que hacer Alberto: ver `docs/FIRMA.md`.
+- **Iconos:** fuentes en `src-tauri/iconos-fuente/` (`icono.svg` grande, `icono-pequeno.svg` para 16-32 px, bandeja a color y
+  plantilla negra para macOS). `icon.ico` se arma con Pillow usando la variante pequeña hasta 32 px. Imágenes de los instaladores:
+  `scripts/imagenes-instalador.py`.
+- **Instaladores:** NSIS por usuario (`%LOCALAPPDATA%\Vitaclip`, sin administrador), MSI en es-ES y en-US, dmg con fondo. El job
+  `instalador` de `prueba-windows.yml` lo instala de verdad y saca capturas del asistente.

@@ -7,7 +7,7 @@ import { aviso, mostrarError, intentar } from './comun.js';
 import { ATAJOS_DEFECTO } from './atajos.js';
 
 export const URL_REPO = 'https://github.com/BertMarti/vitaclip';
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 export const LIMITE_MINIMO = 10;
 export const LIMITE_MAXIMO = 10000;
 export const LIMITE_DEFECTO = 500;
