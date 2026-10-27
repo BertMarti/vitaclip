@@ -63,7 +63,7 @@ const AJUSTES_INICIALES = {
   tema: 'sistema',
   idioma: 'es',
   pegarAuto: true,
-  arrancarConSistema: false,
+  arrancarConSistema: true,
   pausado: false,
   limiteHistorial: 500,
   ignorar: ['^\\d{13,19}$', '^(ghp_|sk-|AKIA|xox[abp]-)'],

@@ -1,3 +1,4 @@
+mod arranque;
 mod atajo;
 mod boveda;
 mod captura;
@@ -48,9 +49,20 @@ pub fn run() {
         .setup(|app| {
             let dir = carpeta_datos(app.handle())?;
             let conexion = db::abrir(&dir.join("vitaclip.db"))?;
-            let ajustes = db::ajuste_leer(&conexion, "ajustes")?
+            let mut ajustes = db::ajuste_leer(&conexion, "ajustes")?
                 .and_then(|x| serde_json::from_str::<db::Ajustes>(&x).ok())
                 .unwrap_or_default();
+            // Arranque con el sistema: se guarda tal cual viene de la base de datos (antes de mover la clave de IA).
+            let primera_vez = db::ajuste_leer(&conexion, "arranque")?.is_none();
+            if let Some(activo) = arranque::sincronizar(app.handle(), primera_vez) {
+                if activo != ajustes.arrancar_con_sistema {
+                    ajustes.arrancar_con_sistema = activo;
+                    if let Ok(json) = serde_json::to_string(&ajustes) {
+                        db::ajuste_guardar(&conexion, "ajustes", &json)?;
+                    }
+                }
+                db::ajuste_guardar(&conexion, "arranque", "1")?;
+            }
             // Migración: una clave de IA guardada en la base de datos por una versión anterior pasa al llavero del sistema.
             if !ajustes.ia.clave.is_empty() {
                 let mut sin_clave = ajustes.clone();

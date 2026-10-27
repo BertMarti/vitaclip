@@ -39,4 +39,25 @@ $icono.ToBitmap().Save("capturas\icono-ejecutable.png")
 $acceso = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Vitaclip*.lnk" | Select-Object -First 1
 Write-Host "Acceso directo en el menú Inicio: $($acceso.FullName)"
 if ($datos.Publisher -ne "BertMarti") { throw "El editor debería ser BertMarti" }
+
+# 4) Arranque con el sistema: al abrirla por primera vez se registra en Run con la ruta instalada y --oculto.
+$run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$aprobado = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
+Start-Process $exe.FullName
+Start-Sleep -Seconds 10
+$entrada = (Get-ItemProperty $run -ErrorAction SilentlyContinue).Vitaclip
+Write-Host "Arranque con el sistema: $entrada"
+if (-not $entrada -or $entrada -notlike "*$($exe.FullName)*" -or $entrada -notlike "*--oculto*") {
+  throw "La app no se registró para arrancar con el sistema"
+}
+# Si el usuario lo desactiva en el Administrador de tareas, la app no debe volver a activarlo al abrirse.
+Stop-Process -Name vitaclip -Force
+if (-not (Test-Path $aprobado)) { New-Item $aprobado -Force | Out-Null }
+New-ItemProperty $aprobado -Name Vitaclip -PropertyType Binary -Value ([byte[]](3, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8)) -Force | Out-Null
+Start-Process $exe.FullName
+Start-Sleep -Seconds 10
+Stop-Process -Name vitaclip -Force
+$estado = (Get-ItemProperty $aprobado).Vitaclip
+Write-Host "Tras desactivarlo en el Administrador de tareas: primer byte $($estado[0]) (3 = desactivado)"
+if ($estado[0] -ne 3) { throw "La app volvió a activar el arranque que el usuario había quitado" }
 Write-Host "RESULTADO INSTALADOR: correcto"

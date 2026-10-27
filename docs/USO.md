@@ -26,6 +26,11 @@ La ventana de Vitaclip es compacta y flexible:
   - **Junto al ratón:** la ventana aparece donde esté el puntero.
   - **Recordar posición:** se abre siempre en el mismo sitio y con el tamaño que elegiste.
 
+## Al encender el equipo
+Vitaclip se inicia solo cada vez que entras en tu sesión y se queda en la bandeja, junto al reloj, sin abrir ninguna ventana. Así
+tus atajos funcionan desde el primer momento. Puedes quitarlo en **Ajustes → General → Iniciar al encender el equipo**. En Windows
+también puedes quitarlo desde el Administrador de tareas (pestaña *Aplicaciones de arranque*), y Vitaclip lo respetará.
+
 ---
 
 ## Historial y búsqueda

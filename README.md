@@ -52,7 +52,8 @@ Por qué sale ese aviso y cómo se quitará con la firma de código: **[docs/FIR
 ## Empieza en 30 segundos
 
 1. Abre Vitaclip. La primera vez verás los ajustes: **graba tus atajos** pulsando la combinación que quieras.
-2. Copia cosas como siempre. Vitaclip las guarda en segundo plano (vive junto al reloj, en la bandeja del sistema).
+2. Copia cosas como siempre. Vitaclip las guarda en segundo plano (vive junto al reloj, en la bandeja del sistema) y se inicia solo al
+   encender el equipo.
 3. Pulsa tu atajo, escribe para buscar y pulsa `Enter`. Ya está pegado.
 
 | Atajo (sugerencia, cámbialo a tu gusto) | Qué hace |

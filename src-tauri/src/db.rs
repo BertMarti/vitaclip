@@ -155,7 +155,7 @@ impl Default for Ajustes {
             tema: "sistema".into(),
             idioma: "es".into(),
             pegar_auto: true,
-            arrancar_con_sistema: false,
+            arrancar_con_sistema: true,
             pausado: false,
             limite_historial: 500,
             retencion_dias: 0,

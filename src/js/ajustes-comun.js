@@ -22,7 +22,7 @@ export const datos = {
     tema: 'sistema',
     idioma: 'es',
     pegarAuto: true,
-    arrancarConSistema: false,
+    arrancarConSistema: true,
     pausado: false,
     limiteHistorial: LIMITE_DEFECTO,
     retencionDias: 0,

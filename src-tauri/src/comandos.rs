@@ -220,16 +220,7 @@ pub fn ajustes_guardar(
         atajo::registrar(&app, &ajustes.atajos)?;
     }
     if ajustes.arrancar_con_sistema != anterior.arrancar_con_sistema {
-        use tauri_plugin_autostart::ManagerExt;
-        if ajustes.arrancar_con_sistema {
-            app.autolaunch()
-                .enable()
-                .map_err(|x| format!("No se pudo activar el arranque automático: {x}"))?;
-        } else {
-            app.autolaunch()
-                .disable()
-                .map_err(|x| format!("No se pudo desactivar el arranque automático: {x}"))?;
-        }
+        crate::arranque::aplicar(&app, ajustes.arrancar_con_sistema)?;
     }
     // La clave va al llavero del sistema; a la base de datos solo si no hay llavero.
     let devolver = enmascarar(ajustes.clone());
