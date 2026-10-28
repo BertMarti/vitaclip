@@ -102,3 +102,11 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   `scripts/imagenes-instalador.py`.
 - **Instaladores:** NSIS por usuario (`%LOCALAPPDATA%\Vitaclip`, sin administrador), MSI en es-ES y en-US, dmg con fondo. El job
   `instalador` de `prueba-windows.yml` lo instala de verdad y saca capturas del asistente.
+
+## Arranque con el sistema (2026-10-28, v0.3.2)
+- **Activado por defecto** y activado una vez al actualizar (clave `arranque` en la tabla de ajustes). Después manda el sistema: si el
+  usuario lo quita en el Administrador de tareas o borra la entrada, el ajuste se apaga y no se vuelve a poner (probado en Windows
+  real y en la Pi).
+- **No usar `tauri-plugin-autostart`:** con la app como administrador escribía en HKLM (todo el equipo) y ponía la ruta sin comillas,
+  que falla con espacios. `arranque.rs` usa `auto-launch` con `WindowsEnableMode::CurrentUser` y la ruta entre comillas.
+- En Linux `auto-launch` escribe en `~/.config/autostart` aunque se cambie `XDG_CONFIG_HOME`: al probar, borrar la entrada después.
