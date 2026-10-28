@@ -3,19 +3,41 @@
 //!
 //! Viene activado. Después manda lo que diga el sistema: si el usuario lo quita desde el Administrador de tareas de Windows
 //! (o borra la entrada a mano), el ajuste se apaga solo y Vitaclip no lo vuelve a poner por su cuenta.
+//!
+//! Se usa `auto-launch` directamente y no `tauri-plugin-autostart`, porque el plugin no deja elegir «solo este usuario» (si la
+//! app corre como administrador, se registraba para todo el equipo) y escribe la ruta sin comillas (con espacios en la ruta,
+//! como `C:\Users\Ana María\…` o `C:\Program Files\…`, Windows no la encontraba al encender el equipo).
 
+use auto_launch::{AutoLaunch, AutoLaunchBuilder};
 use tauri::AppHandle;
-use tauri_plugin_autostart::ManagerExt;
+
+fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
+    let exe = std::env::current_exe().map_err(|x| x.to_string())?;
+    let mut b = AutoLaunchBuilder::new();
+    b.set_app_name(&app.package_info().name).set_args(&["--oculto"]);
+    #[cfg(windows)]
+    b.set_app_path(&format!("\"{}\"", exe.display()))
+        .set_windows_enable_mode(auto_launch::WindowsEnableMode::CurrentUser);
+    #[cfg(target_os = "macos")]
+    b.set_app_path(&exe.canonicalize().unwrap_or(exe).display().to_string())
+        .set_macos_launch_mode(auto_launch::MacOSLaunchMode::LaunchAgent);
+    #[cfg(target_os = "linux")]
+    {
+        use tauri::Manager;
+        // En un AppImage, `current_exe` apunta al montaje temporal: hay que registrar el propio archivo .AppImage.
+        let ruta = app.env().appimage.map(Into::into).unwrap_or(exe);
+        b.set_app_path(&format!("\"{}\"", ruta.display()));
+    }
+    b.build().map_err(|x| x.to_string())
+}
 
 pub fn aplicar(app: &AppHandle, activar: bool) -> Result<(), String> {
-    let gestor = app.autolaunch();
+    let g = gestor(app)?;
     if activar {
-        gestor
-            .enable()
+        g.enable()
             .map_err(|x| format!("No se pudo activar el arranque automático: {x}"))
     } else {
-        gestor
-            .disable()
+        g.disable()
             .map_err(|x| format!("No se pudo desactivar el arranque automático: {x}"))
     }
 }
@@ -29,8 +51,11 @@ pub fn sincronizar(app: &AppHandle, primera_vez: bool) -> Option<bool> {
     if cfg!(debug_assertions) {
         return None;
     }
-    let activo = primera_vez || app.autolaunch().is_enabled().ok()?;
+    let activo = primera_vez || gestor(app).ok()?.is_enabled().ok()?;
     if activo {
+        // Quita la entrada «para todo el equipo» que pudo dejar una versión anterior y escribe la de este usuario.
+        #[cfg(windows)]
+        let _ = aplicar(app, false);
         aplicar(app, true).ok()?;
     }
     Some(activo)

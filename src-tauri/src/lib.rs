@@ -41,11 +41,6 @@ pub fn run() {
                 })
                 .build(),
         )
-        .plugin(
-            tauri_plugin_autostart::Builder::new()
-                .args(["--oculto"])
-                .build(),
-        )
         .setup(|app| {
             let dir = carpeta_datos(app.handle())?;
             let conexion = db::abrir(&dir.join("vitaclip.db"))?;
