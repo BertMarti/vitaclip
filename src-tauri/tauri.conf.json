@@ -92,6 +92,18 @@
           "en-US"
         ]
       }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM2MzlCODcwNzIyODgwOEYKUldTUGdDaHljTGc1eHEyVU1sYUpVNExVdFhId0xUSXQwcEc4bm5lVDh2U0dkSXhRc1BhMlZianIK",
+      "endpoints": [
+        "https://github.com/BertMarti/vitaclip/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

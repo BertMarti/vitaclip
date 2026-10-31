@@ -50,6 +50,9 @@ jobs:
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Clave del actualizador (minisign): firma cada instalador para que la app solo instale descargas auténticas.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Vitaclip ${{ github.ref_name }}"
@@ -57,6 +60,8 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          # En Windows, latest.json apunta por defecto al instalador NSIS (el que se recomienda descargar).
+          updaterJsonPreferNsis: true
 
       # --- Firma de Windows con SignPath (solo si el repositorio tiene sus credenciales; ver docs/FIRMA.md) ---
       - name: Reunir los instaladores de Windows para firmar
@@ -93,6 +98,17 @@ jobs:
         run: |
           ls -la firmados
           gh release upload "${{ github.ref_name }}" firmados/*.exe firmados/*.msi -R "${{ github.repository }}" --clobber
+      # La firma Authenticode cambia los archivos: hay que volver a firmarlos para el actualizador (el job `sumas` rehace latest.json).
+      - name: Volver a firmar para el actualizador
+        if: matrix.plataforma == 'windows-latest' && vars.SIGNPATH_ORGANIZATION_ID != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          for f in firmados/*.exe firmados/*.msi; do npx tauri signer sign "$f"; done
+          gh release upload "${{ github.ref_name }}" firmados/*.sig -R "${{ github.repository }}" --clobber
 
   # Sumas SHA-256 de todos los instaladores y atestación de procedencia (se comprueba con `gh attestation verify`).
   sumas:
@@ -110,6 +126,19 @@ jobs:
           mkdir artefactos
           gh release download "${{ github.ref_name }}" -R "${{ github.repository }}" -D artefactos --skip-existing
           rm -f artefactos/SHA256SUMS.txt
+      - name: Rehacer latest.json con las firmas de los instaladores firmados por SignPath
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd artefactos
+          [ -f latest.json ] || exit 0
+          for clave in $(jq -r '.platforms | to_entries[] | select(.value.url | test("\\.(exe|msi)$")) | .key' latest.json); do
+            nombre=$(jq -r --arg c "$clave" '.platforms[$c].url | split("/") | last' latest.json)
+            jq --arg c "$clave" --rawfile s "$nombre.sig" '.platforms[$c].signature = ($s | rtrimstr("\n"))' latest.json > l.tmp
+            mv l.tmp latest.json
+          done
+          gh release upload "${{ github.ref_name }}" latest.json -R "${{ github.repository }}" --clobber
       - name: Calcular y subir SHA256SUMS.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
