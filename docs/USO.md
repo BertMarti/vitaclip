@@ -78,7 +78,10 @@ Los fragmentos son textos que usas a menudo. Puedes crearlos en su pestaña y us
 ## Captura de pantalla
 Al pulsar el atajo de captura (o en la pestaña **Capturas**):
 1. **Selecciona la zona:** haz clic y arrastra. Puedes mover la selección con las flechas del teclado o ajustarla con las asas.
-2. **Dibuja:** usa las herramientas de la barra (lápiz, línea, flecha, rectángulo, marcador, texto).
+2. **Dibuja:** usa las herramientas de la barra:
+   - **Pixelar:** arrastra un rectángulo sobre lo que quieras tapar; el tamaño del bloque depende del grosor elegido.
+   - **Numerar:** cada clic pone el siguiente número (1, 2, 3...); `Ctrl+Z` quita el último.
+   - Lápiz, línea, flecha, rectángulo, marcador y texto.
 3. **Colores:** cambia el color y el grosor del trazo.
 4. **Acciones:**
    - `Enter` o `Ctrl+C`: copia la captura al historial.
@@ -114,6 +117,16 @@ Usa el mismo selector de zona:
 - **Contraseñas:** lo que copias desde gestores de contraseñas como KeePassXC, 1Password o Bitwarden no se guarda.
 - **Carpetas:** en **Ajustes → Capturas y vídeo** eliges dónde se guardan las capturas y los vídeos (**Elegir…**) y las abres (**Abrir**). Desde la pestaña **Capturas** del popup también puedes abrirlas y ver lo último que has guardado.
 - **Importar/Exportar (Ajustes → Privacidad):** guarda tu historial de textos y tus fragmentos en un archivo JSON (en Descargas) para llevarlos a otro equipo. No incluye imágenes, ajustes ni la bóveda.
+
+---
+
+## Actualizaciones
+Vitaclip comprueba una vez al día si hay una versión más reciente en GitHub.
+- **Aviso:** si hay una actualización, verás una notificación y una opción nueva en el menú de la bandeja («Actualizar a X.Y.Z»).
+- **Instalación:** en **Ajustes → General** verás el botón **Actualizar y reiniciar**. La descarga se verifica mediante firma digital para asegurar que no ha sido modificada.
+- **Buscar ahora:** puedes forzar la comprobación en cualquier momento desde Ajustes.
+- **Apagar:** si prefieres hacerlo a mano, desactiva «Buscar actualizaciones automáticamente» en Ajustes.
+- **Linux:** solo el formato **AppImage** se puede actualizar solo. Si usas `.deb` o `.rpm`, el botón **Descargar** te llevará a la web para bajar el paquete nuevo.
 
 ---
 

@@ -50,6 +50,9 @@ Instala el paquete correspondiente a tu distribución:
   La grabación de vídeo en Wayland mostrará un diálogo del sistema para que elijas qué pantalla compartir (vía PipeWire / xdg-desktop-portal).
 - En **GNOME**, el icono de la bandeja necesita la extensión *AppIndicator and KStatusNotifierItem Support*.
 
+## Actualizar
+A partir de la versión 1.0, Vitaclip se actualiza sola (ver **[Guía de uso](USO.md#actualizaciones)**). Si tienes una versión anterior a la 1.0, simplemente descarga la nueva versión e instálala encima de la anterior. En Linux con paquetes `.deb` o `.rpm`, se actualiza instalando el paquete nuevo.
+
 ---
 
 ## Carpetas de archivos y datos

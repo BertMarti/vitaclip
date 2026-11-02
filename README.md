@@ -68,7 +68,7 @@ En Mac son `⌘⌥V`, `⌘⌥C` y `⌘⌥R`. Funcionan con cualquier distribuci�
 
 <img src="docs/img/captura-editor.png" width="640" alt="Editor de capturas con flecha, recuadro, marcador y texto">
 
-Arrastra para elegir la zona y anótala: **lápiz, línea, flecha, rectángulo, marcador y texto**, con 6 colores y 3 grosores.
+Arrastra para elegir la zona y anótala: **lápiz, línea, flecha, rectángulo, marcador, texto, pixelar** (para tapar datos sensibles) y **numerar** (círculos 1, 2, 3… para explicar pasos), con 6 colores y 3 grosores.
 
 | Tecla | Acción |
 |---|---|
@@ -92,10 +92,11 @@ terminar, pulsa **Detener** o el mismo atajo.
 
 ## Todo lo que trae
 
-- **Historial** de textos e imágenes con búsqueda instantánea (`img:`, `url:`, `fij:`), fijados y pegado con `Enter` o `Ctrl+1…9`.
-- **Detalle** de cada elemento con contadores, código QR y colores (HEX, RGB, HSL).
+- **Historial** de textos e imágenes con búsqueda instantánea (`img:`, `url:`, `fij:`), fijados, **pegar varios** a la vez (Shift+↑/↓ o Ctrl+clic, y Enter) y pegado con `Enter` o `Ctrl+1…9`.
+- **Detalle** de cada elemento con contadores, código QR, colores (HEX, RGB, HSL) y **editar antes de pegar**.
 - **22 transformaciones de texto:** MAYÚSCULAS, Tipo Título, camelCase, snake_case, JSON bonito, Base64, URL, quitar tildes, ordenar líneas…
 - **Calculadora** en el buscador: `=21*1,21` → `25,41`, `=200*15%` → `30`.
+- **Actualizaciones automáticas:** una vez al día comprueba si hay versión nueva y se actualiza con un clic; la descarga va firmada; se puede apagar en Ajustes → General.
 - **Fragmentos** con variables (`{fecha}`, `{hora}`, `{portapapeles}`, `{uuid}`, `{cursor}`) y campos que se rellenan al pegar (`{campo:Nombre}`).
 - **Bóveda cifrada** para contraseñas y datos sensibles (Argon2id + XChaCha20-Poly1305). Lo que pegas desde ella va marcado para que ningún historial lo guarde (tampoco el de Windows) y se borra del portapapeles a los 30 segundos.
 - **IA opcional** para traducir, resumir, corregir o reescribir, con tu [Ollama](https://ollama.com) local o una clave gratuita de Groq o Gemini.
@@ -105,7 +106,7 @@ Guía completa: **[docs/USO.md](docs/USO.md)**.
 
 ## Privacidad
 
-- Todo se guarda **solo en tu equipo**, en una base de datos SQLite. Sin telemetría, sin cuentas y sin anuncios.
+- Todo se guarda **solo en tu equipo**, en una base de datos SQLite. Sin telemetría, sin cuentas y sin anuncios. La única conexión que hace Vitaclip por su cuenta es preguntar una vez al día a GitHub si hay versión nueva (sin enviar datos tuyos) y se puede apagar.
 - **Respeta a los gestores de contraseñas:** lo que copias desde KeePassXC, 1Password, Bitwarden y similares (que lo marcan como secreto) no entra en el historial.
 - Por defecto **no se guardan** números de tarjeta ni claves con pinta de token (`ghp_…`, `sk-…`, `AKIA…`), y puedes añadir tus propios patrones.
 - Puedes **pausar la captura** del portapapeles desde la bandeja y elegir que **se borre lo antiguo** (a la semana, al mes…).
