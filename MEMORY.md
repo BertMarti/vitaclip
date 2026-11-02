@@ -126,3 +126,7 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - **Probar la interfaz sin ventana:** Chromium sin cabeza dirigido por CDP (`node --experimental-websocket`, script en el
   scratchpad de la sesión) contra `python3 -m http.server` de `src/` en un puerto libre (el 8765 lo usa otro proyecto). La app
   real en Xvfb necesita `GDK_BACKEND=x11` (si no, GTK abre las ventanas en el escritorio Wayland de la Pi).
+- **Prueba real del actualizador** (`prueba-actualizacion.yml`, a mano): instala la versión `desde` publicada y maneja Ajustes por UI
+  Automation (WebView2 se expone bien; se buscan las ventanas por el proceso `vitaclip`, no por el título). Sin `esperada` debe decir
+  «Tienes la última versión»; con ella, «Actualizar y reiniciar» y comprobar registro, ejecutable y que se reabre. El 2/11 pasó
+  1.0.0 → 1.0.1. Ojo: la subida de un archivo a la publicación puede fallar suelta («Error creating policy»): `gh run rerun --failed`.
