@@ -83,7 +83,8 @@ fn estado(app: &AppHandle) -> EstadoActualizacion {
     }
 }
 
-fn guardar_sin_disponible(app: &AppHandle) {
+/// Sin versión nueva. `comprobada` = la consulta fue bien (si falló la red, no se apunta como comprobado).
+fn guardar_sin_disponible(app: &AppHandle, comprobada: bool) {
     if let Some(e) = app.try_state::<Estado>() {
         if let Ok(mut x) = e.actualizacion.lock() {
             *x = None;
@@ -97,8 +98,10 @@ fn guardar_sin_disponible(app: &AppHandle) {
         if let Ok(mut x) = e.fecha.lock() {
             *x = None;
         }
-        if let Ok(mut x) = e.comprobado.lock() {
-            *x = Some(ahora());
+        if comprobada {
+            if let Ok(mut x) = e.comprobado.lock() {
+                *x = Some(ahora());
+            }
         }
         if let Ok(mut x) = e.buscando.lock() {
             *x = false;
@@ -136,7 +139,7 @@ async fn buscar(app: AppHandle) {
         Ok(updater) => updater.check().await,
         Err(error) => {
             eprintln!("Error al preparar la comprobación de actualizaciones: {error}");
-            guardar_sin_disponible(&app);
+            guardar_sin_disponible(&app, false);
             return;
         }
     };
@@ -197,11 +200,11 @@ async fn buscar(app: AppHandle) {
             }
         }
         Ok(None) => {
-            guardar_sin_disponible(&app);
+            guardar_sin_disponible(&app, true);
         }
         Err(error) => {
             eprintln!("Error al comprobar actualizaciones: {error}");
-            guardar_sin_disponible(&app);
+            guardar_sin_disponible(&app, false);
         }
     }
 }

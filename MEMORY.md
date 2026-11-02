@@ -110,3 +110,16 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - **No usar `tauri-plugin-autostart`:** con la app como administrador escribía en HKLM (todo el equipo) y ponía la ruta sin comillas,
   que falla con espacios. `arranque.rs` usa `auto-launch` con `WindowsEnableMode::CurrentUser` y la ruta entre comillas.
 - En Linux `auto-launch` escribe en `~/.config/autostart` aunque se cambie `XDG_CONFIG_HOME`: al probar, borrar la entrada después.
+
+## Versión 1.0 (2026-11-02)
+- Diseño en `docs/specs/2026-10-31-vitaclip-v1-diseno.md`: actualizaciones automáticas, Pixelar/Numerar y pegar varios/editar.
+- **Actualizador:** `tauri-plugin-updater` usado solo desde Rust (`actualizar.rs`); la interfaz no tiene permisos del plugin.
+  Clave minisign en `~/homelab/.claves-vitaclip/updater.{key,pass,key.pub}`; la privada va en los secretos de GitHub
+  `TAURI_SIGNING_PRIVATE_KEY(_PASSWORD)` (los pone Alberto: el clasificador no deja a Claude escribir secretos). Sin esos secretos
+  `release.yml` y el job `instalador` de `prueba-windows.yml` fallan, porque `createUpdaterArtifacts` está activo.
+- Con SignPath activo, `release.yml` vuelve a firmar con la clave del actualizador los instaladores firmados y rehace `latest.json`.
+- Fallos de los delegados encontrados al revisar: el estado del actualizador no se registraba con `manage` (los comandos habrían
+  fallado), faltaba importar `pegarTexto` en `popup.js` y el pie no se repintaba. Probar SIEMPRE la interfaz (ver abajo).
+- **Probar la interfaz sin ventana:** Chromium sin cabeza dirigido por CDP (`node --experimental-websocket`, script en el
+  scratchpad de la sesión) contra `python3 -m http.server` de `src/` en un puerto libre (el 8765 lo usa otro proyecto). La app
+  real en Xvfb necesita `GDK_BACKEND=x11` (si no, GTK abre las ventanas en el escritorio Wayland de la Pi).

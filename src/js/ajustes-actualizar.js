@@ -64,7 +64,7 @@ export function seccionActualizaciones() {
       el('span', { class: 'fila-ajuste-etiqueta', text: t('actualizaciones.version', { version: estado.actual }) }),
       el('span', { class: 'suave', text: haceCuando(estado.comprobado) }),
     ),
-    el('div', { class: 'fila-ajuste-control' }, control, !estado.buscando && !estado.disponible && !error && el('span', { class: 'suave', text: t('actualizaciones.ultima') })),
+    el('div', { class: 'fila-ajuste-control' }, control, !estado.buscando && estado.comprobado && !estado.disponible && !error && el('span', { class: 'suave', text: t('actualizaciones.ultima') })),
   );
   return grupoAjustes(
     filaAjuste('actualizaciones.titulo', 'actualizaciones.descripcion', interruptor(a.buscarActualizaciones, valor => guardar({ buscarActualizaciones: valor }), t('actualizaciones.titulo'))),
