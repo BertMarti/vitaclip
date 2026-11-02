@@ -60,8 +60,8 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-          # En Windows, latest.json apunta por defecto al instalador NSIS (el que se recomienda descargar).
-          updaterJsonPreferNsis: true
+          # latest.json lo genera el job `sumas` al final: si lo sube cada compilación, se pisan entre ellas.
+          includeUpdaterJson: false
 
       # --- Firma de Windows con SignPath (solo si el repositorio tiene sus credenciales; ver docs/FIRMA.md) ---
       - name: Reunir los instaladores de Windows para firmar
@@ -98,7 +98,7 @@ jobs:
         run: |
           ls -la firmados
           gh release upload "${{ github.ref_name }}" firmados/*.exe firmados/*.msi -R "${{ github.repository }}" --clobber
-      # La firma Authenticode cambia los archivos: hay que volver a firmarlos para el actualizador (el job `sumas` rehace latest.json).
+      # La firma Authenticode cambia los archivos: hay que volver a firmarlos para el actualizador (el job `sumas` genera latest.json).
       - name: Volver a firmar para el actualizador
         if: matrix.plataforma == 'windows-latest' && vars.SIGNPATH_ORGANIZATION_ID != ''
         shell: bash
@@ -119,26 +119,24 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          sparse-checkout: .github/scripts
       - name: Descargar los instaladores del borrador
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir artefactos
           gh release download "${{ github.ref_name }}" -R "${{ github.repository }}" -D artefactos --skip-existing
-          rm -f artefactos/SHA256SUMS.txt
-      - name: Rehacer latest.json con las firmas de los instaladores firmados por SignPath
-        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+          rm -f artefactos/SHA256SUMS.txt artefactos/latest.json
+      # Con las firmas ya definitivas (también las que se rehacen tras SignPath).
+      - name: Generar y subir latest.json para el actualizador
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd artefactos
-          [ -f latest.json ] || exit 0
-          for clave in $(jq -r '.platforms | to_entries[] | select(.value.url | test("\\.(exe|msi)$")) | .key' latest.json); do
-            nombre=$(jq -r --arg c "$clave" '.platforms[$c].url | split("/") | last' latest.json)
-            jq --arg c "$clave" --rawfile s "$nombre.sig" '.platforms[$c].signature = ($s | rtrimstr("\n"))' latest.json > l.tmp
-            mv l.tmp latest.json
-          done
-          gh release upload "${{ github.ref_name }}" latest.json -R "${{ github.repository }}" --clobber
+          gh release view "${{ github.ref_name }}" -R "${{ github.repository }}" --json body -q .body > notas.txt
+          .github/scripts/generar-latest-json.sh artefactos "${{ github.ref_name }}" "${{ github.repository }}" "$PWD/notas.txt"
+          gh release upload "${{ github.ref_name }}" artefactos/latest.json -R "${{ github.repository }}" --clobber
       - name: Calcular y subir SHA256SUMS.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

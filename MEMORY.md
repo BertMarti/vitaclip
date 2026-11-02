@@ -115,9 +115,12 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - Diseño en `docs/specs/2026-10-31-vitaclip-v1-diseno.md`: actualizaciones automáticas, Pixelar/Numerar y pegar varios/editar.
 - **Actualizador:** `tauri-plugin-updater` usado solo desde Rust (`actualizar.rs`); la interfaz no tiene permisos del plugin.
   Clave minisign en `~/homelab/.claves-vitaclip/updater.{key,pass,key.pub}`; la privada va en los secretos de GitHub
-  `TAURI_SIGNING_PRIVATE_KEY(_PASSWORD)` (los pone Alberto: el clasificador no deja a Claude escribir secretos). Sin esos secretos
+  `TAURI_SIGNING_PRIVATE_KEY(_PASSWORD)` (puestos el 2/11 con `gh secret set ... < archivo`, con permiso de Alberto). Sin esos secretos
   `release.yml` y el job `instalador` de `prueba-windows.yml` fallan, porque `createUpdaterArtifacts` está activo.
-- Con SignPath activo, `release.yml` vuelve a firmar con la clave del actualizador los instaladores firmados y rehace `latest.json`.
+- `latest.json` lo genera SOLO el job `sumas` (`.github/scripts/generar-latest-json.sh`, con las `.sig` de la publicación);
+  tauri-action va con `includeUpdaterJson: false`. Si lo sube cada compilación, se pisan: en el primer intento de la 1.0.0 una
+  falló con «Not Found» y la publicación se quedó sin `latest.json`. Con SignPath activo, `release.yml` vuelve a firmar los
+  instaladores firmados antes de `sumas`, así que el JSON ya sale con las firmas buenas.
 - Fallos de los delegados encontrados al revisar: el estado del actualizador no se registraba con `manage` (los comandos habrían
   fallado), faltaba importar `pegarTexto` en `popup.js` y el pie no se repintaba. Probar SIEMPRE la interfaz (ver abajo).
 - **Probar la interfaz sin ventana:** Chromium sin cabeza dirigido por CDP (`node --experimental-websocket`, script en el
