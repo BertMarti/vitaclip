@@ -47,6 +47,10 @@ fn main() {
             "video_iniciar",
             "video_parar",
             "abrir_repositorio",
+            "actualizacion_estado",
+            "actualizacion_buscar",
+            "actualizacion_instalar",
+            "actualizacion_pagina",
         ]),
     ))
     .expect("error al preparar la compilación");

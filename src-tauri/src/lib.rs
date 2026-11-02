@@ -1,3 +1,4 @@
+mod actualizar;
 mod arranque;
 mod atajo;
 mod boveda;
@@ -23,6 +24,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if args.iter().any(|x| x == "--captura") {
                 captura::iniciar_en_hilo(app.clone(), "imagen");
@@ -114,7 +116,9 @@ pub fn run() {
             }
             vigia::iniciar(app.handle().clone());
             vigia::iniciar_retencion(app.handle().clone());
+            app.manage(actualizar::Estado::default());
             construir_bandeja(app)?;
+            actualizar::iniciar(app.handle().clone());
             if std::env::args().any(|x| x == "--captura") {
                 captura::iniciar_en_hilo(app.handle().clone(), "imagen");
             } else if std::env::args().any(|x| x == "--video") {
@@ -168,7 +172,11 @@ pub fn run() {
             comandos::ajustes_abrir,
             comandos::pausa_cambiar,
             comandos::ventana_arrastrar,
-            comandos::abrir_repositorio
+            comandos::abrir_repositorio,
+            actualizar::actualizacion_estado,
+            actualizar::actualizacion_buscar,
+            actualizar::actualizacion_instalar,
+            actualizar::actualizacion_pagina
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| eprintln!("Error al arrancar Vitaclip: {e}"));
@@ -225,6 +233,7 @@ fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         .separator()
         .item(&salir)
         .build()?;
+    actualizar::guardar_menu(app.handle(), menu.clone());
     let mut tray = TrayIconBuilder::with_id("vitaclip")
         .menu(&menu)
         .tooltip("Vitaclip");
@@ -249,6 +258,9 @@ fn construir_bandeja(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Err
         }
         "video" => video::alternar(app.clone()),
         "ajustes" => {
+            let _ = atajo::abrir_ajustes(app, false);
+        }
+        "actualizar" => {
             let _ = atajo::abrir_ajustes(app, false);
         }
         "pausar" => {

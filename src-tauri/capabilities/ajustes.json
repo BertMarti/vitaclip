@@ -17,6 +17,10 @@
     "allow-ia-probar",
     "allow-pausa-cambiar",
     "allow-ventana-arrastrar",
-    "allow-abrir-repositorio"
+    "allow-abrir-repositorio",
+    "allow-actualizacion-estado",
+    "allow-actualizacion-buscar",
+    "allow-actualizacion-instalar",
+    "allow-actualizacion-pagina"
   ]
 }

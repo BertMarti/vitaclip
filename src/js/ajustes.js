@@ -15,6 +15,7 @@ import { seccionAtajos, activarBienvenida } from './ajustes-atajos.js';
 import { seccionCapturas } from './ajustes-capturas.js';
 import { seccionPrivacidad } from './ajustes-privacidad.js';
 import { seccionIa, seccionAcerca } from './ajustes-ia.js';
+import { avisoActualizacion, iniciarActualizaciones, seccionActualizaciones } from './ajustes-actualizar.js';
 
 const SECCIONES = [
   { id: 'general', clave: 'ajustes.general', icono: 'ajustes', pintar: seccionGeneral },
@@ -103,6 +104,7 @@ function seccionGeneral() {
       filaAjuste('ajustes.retencion', 'ajustes.retencionDescripcion', selectorRetencion()),
       filaAjuste('ajustes.ventana', 'ajustes.ventanaDescripcion', selectorVentana()),
     ),
+    seccionActualizaciones(),
   ];
 }
 
@@ -126,7 +128,7 @@ function pintar() {
   document.title = t('ajustes.tituloVentana');
   pintarNavegacion();
   const actual = SECCIONES.find(item => item.id === seccion) ?? SECCIONES[0];
-  poner(nodos.panel, actual.pintar());
+  poner(nodos.panel, avisoActualizacion(), actual.pintar());
 }
 
 function irA(id) {
@@ -152,6 +154,7 @@ async function iniciar() {
   setIdioma(datos.ajustes.idioma);
   aplicarTema(datos.ajustes.tema);
   pintar();
+  await iniciarActualizaciones();
   window.addEventListener('hashchange', () => {
     leerHash();
     pintar();

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-actualizacion-buscar"
+description = "Enables the actualizacion_buscar command without any pre-configured scope."
+commands.allow = ["actualizacion_buscar"]
+
+[[permission]]
+identifier = "deny-actualizacion-buscar"
+description = "Denies the actualizacion_buscar command without any pre-configured scope."
+commands.deny = ["actualizacion_buscar"]
