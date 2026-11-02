@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   puntaFlecha, rectDeAnotacion, escalarAnotacion, esUtil, tamanoTexto, anchoMarcador, grosorPara,
+  bloquePixelado, diametroNumero, numeroDe, colorNumero,
   HERRAMIENTAS, COLORES, GROSORES,
 } from '../src/js/herramientas/dibujo.js';
 
 const cerca = (real, esperado) => assert.ok(Math.abs(real - esperado) < 1e-9, `${real} ≠ ${esperado}`);
 
 test('herramientas, 6 colores y 3 grosores', () => {
-  assert.deepEqual(HERRAMIENTAS, ['lapiz', 'linea', 'flecha', 'rectangulo', 'marcador', 'texto']);
+  assert.deepEqual(HERRAMIENTAS, ['lapiz', 'linea', 'flecha', 'rectangulo', 'marcador', 'texto', 'pixelar', 'numero']);
   assert.equal(COLORES.length, 6);
   assert.equal(GROSORES.length, 3);
 });
@@ -72,4 +73,37 @@ test('tamaño de letra y del marcador crecen con el grosor', () => {
   assert.equal(grosorPara('marcador', 4), 22);
   assert.equal(grosorPara('texto', 2), 17);
   assert.equal(grosorPara('flecha', 8), 8);
+});
+
+test('pixelado y números traducen el grosor elegido', () => {
+  assert.deepEqual(GROSORES.map(bloquePixelado), [6, 10, 16]);
+  assert.deepEqual(GROSORES.map(diametroNumero), [22, 28, 36]);
+  assert.equal(grosorPara('pixelar', 4), 10);
+  assert.equal(grosorPara('numero', 8), 36);
+});
+
+test('numeración cuenta solo números anteriores', () => {
+  const anotaciones = [{ tipo: 'numero' }, { tipo: 'linea' }, { tipo: 'numero' }];
+  assert.equal(numeroDe(anotaciones, 0), 1);
+  assert.equal(numeroDe(anotaciones, 2), 2);
+  assert.equal(numeroDe(anotaciones, 3), 3);
+});
+
+test('color del número contrasta con blanco y amarillo', () => {
+  assert.equal(colorNumero('#ffffff'), '#111111');
+  assert.equal(colorNumero('#f59e0b'), '#111111');
+  assert.equal(colorNumero('#ef4444'), '#ffffff');
+});
+
+test('pixelado es útil como rectángulo y número siempre es útil', () => {
+  assert.equal(esUtil({ tipo: 'pixelar', x1: 2, y1: 2, x2: 2, y2: 8 }), false);
+  assert.equal(esUtil({ tipo: 'pixelar', x1: 2, y1: 2, x2: 8, y2: 8 }), true);
+  assert.equal(esUtil({ tipo: 'numero', x: 2, y: 2 }), true);
+});
+
+test('escalado de pixelado y número escala coordenadas y grosor', () => {
+  const pixelar = escalarAnotacion({ tipo: 'pixelar', x1: 10, y1: 20, x2: 30, y2: 40, grosor: 6 }, { x: 10, y: 20 }, 2, 3);
+  assert.deepEqual([pixelar.x1, pixelar.y1, pixelar.x2, pixelar.y2, pixelar.grosor], [0, 0, 40, 60, 15]);
+  const numero = escalarAnotacion({ tipo: 'numero', x: 15, y: 25, grosor: 22 }, { x: 10, y: 20 }, 2, 3);
+  assert.deepEqual([numero.x, numero.y, numero.grosor], [10, 15, 55]);
 });

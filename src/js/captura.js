@@ -73,6 +73,8 @@ function pintar() {
     seleccion: esValida(estado.seleccion, 1) ? estado.seleccion : null,
     anotaciones: estado.anotaciones,
     enCurso: estado.arrastre?.anotacion ?? null,
+    escalaX: estado.escalaX,
+    escalaY: estado.escalaY,
     mostrarAsas: !estado.arrastre || estado.arrastre.tipo === 'mover',
     acento: acento(),
   });
@@ -151,6 +153,9 @@ function nuevaAnotacion(punto) {
   const base = { tipo: estado.herramienta, color: estado.color, grosor: grosorPara(estado.herramienta, estado.grosor) };
   if (estado.herramienta === 'lapiz' || estado.herramienta === 'marcador') {
     return { ...base, puntos: [[punto.x, punto.y]] };
+  }
+  if (estado.herramienta === 'numero') {
+    return { ...base, x: punto.x, y: punto.y };
   }
   return { ...base, x1: punto.x, y1: punto.y, x2: punto.x, y2: punto.y };
 }

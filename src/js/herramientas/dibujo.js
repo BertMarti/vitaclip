@@ -4,10 +4,12 @@
 //   lapiz / marcador: {tipo, puntos: [[x, y]…], color, grosor}
 //   linea / flecha / rectangulo: {tipo, x1, y1, x2, y2, color, grosor}
 //   texto: {tipo, x, y, texto, color, grosor}
+//   pixelar: {tipo, x1, y1, x2, y2, grosor}
+//   numero: {tipo, x, y, color, grosor}
 
 import { normalizar } from './seleccion.js';
 
-export const HERRAMIENTAS = ['lapiz', 'linea', 'flecha', 'rectangulo', 'marcador', 'texto'];
+export const HERRAMIENTAS = ['lapiz', 'linea', 'flecha', 'rectangulo', 'marcador', 'texto', 'pixelar', 'numero'];
 export const COLORES = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#111111', '#ffffff'];
 export const GROSORES = [2, 4, 8];
 export const OPACIDAD_MARCADOR = 0.4;
@@ -45,11 +47,29 @@ export function anchoMarcador(grosor) {
   return grosor * 4 + 6;
 }
 
+export function bloquePixelado(grosor) {
+  return ({ 2: 6, 4: 10, 8: 16 })[grosor] ?? 10;
+}
+
+export function diametroNumero(grosor) {
+  return ({ 2: 22, 4: 28, 8: 36 })[grosor] ?? 28;
+}
+
 // Grosor real de una anotación nueva según la herramienta y el grosor elegido.
 export function grosorPara(herramienta, grosor) {
   if (herramienta === 'marcador') return anchoMarcador(grosor);
   if (herramienta === 'texto') return tamanoTexto(grosor);
+  if (herramienta === 'pixelar') return bloquePixelado(grosor);
+  if (herramienta === 'numero') return diametroNumero(grosor);
   return grosor;
+}
+
+export function numeroDe(anotaciones, indice) {
+  return 1 + anotaciones.slice(0, indice).filter(anotacion => anotacion.tipo === 'numero').length;
+}
+
+export function colorNumero(color) {
+  return color === '#ffffff' || color === '#f59e0b' ? '#111111' : '#ffffff';
 }
 
 // ¿Merece la pena guardarla? (un clic sin mover no deja líneas ni rectángulos vacíos).
@@ -60,10 +80,13 @@ export function esUtil(anotacion) {
       return anotacion.puntos.length > 0;
     case 'texto':
       return anotacion.texto.trim().length > 0;
-    case 'rectangulo': {
+    case 'rectangulo':
+    case 'pixelar': {
       const rect = rectDeAnotacion(anotacion);
       return rect.ancho > 1 && rect.alto > 1;
     }
+    case 'numero':
+      return true;
     default:
       return Math.hypot(anotacion.x2 - anotacion.x1, anotacion.y2 - anotacion.y1) > 1;
   }
@@ -82,7 +105,7 @@ export function escalarAnotacion(anotacion, origen, escalaX, escalaY = escalaX) 
   if ('x1' in anotacion) {
     Object.assign(copia, { x1: px(anotacion.x1), y1: py(anotacion.y1), x2: px(anotacion.x2), y2: py(anotacion.y2) });
   }
-  if (anotacion.tipo === 'texto') {
+  if (anotacion.tipo === 'texto' || anotacion.tipo === 'numero') {
     Object.assign(copia, { x: px(anotacion.x), y: py(anotacion.y) });
   }
   return copia;

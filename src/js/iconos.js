@@ -42,6 +42,8 @@ const FIGURAS = {
   rectangulo: [['rect', { x: 4, y: 6, width: 16, height: 12, rx: 1 }]],
   marcador: [['path', { d: 'M9 15l-2.5 5H14l1-2' }], ['path', { d: 'M9 15l7.5-11 4 2.5L13 17.5z' }]],
   letra: [['path', { d: 'M6 6.5V5h12v1.5M12 5v14M9.5 19h5' }]],
+  pixelar: [['rect', { x: 4, y: 4, width: 7, height: 7, class: 'relleno' }], ['rect', { x: 13, y: 4, width: 7, height: 7 }], ['rect', { x: 4, y: 13, width: 7, height: 7 }], ['rect', { x: 13, y: 13, width: 7, height: 7, class: 'relleno' }]],
+  numero: [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M10 9.5l2-1.5v8M10 16h4' }]],
   deshacer: [['path', { d: 'M9 14L4.5 9.5 9 5' }], ['path', { d: 'M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3' }]],
   copiar: [['rect', { x: 8.5, y: 8.5, width: 11.5, height: 11.5, rx: 2 }], ['path', { d: 'M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5' }]],
   guardar: [['path', { d: 'M12 4v10.5M7.5 10l4.5 4.5 4.5-4.5' }], ['path', { d: 'M4.5 15.5V18a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2.5' }]],

@@ -212,6 +212,8 @@ export const en = {
   'captura.rectangulo': 'Rectangle',
   'captura.marcador': 'Highlighter',
   'captura.texto': 'Text (Enter sets it)',
+  'captura.pixelar': 'Pixelate',
+  'captura.numero': 'Number',
   'captura.color': 'Colour',
   'captura.grosor0': 'Thin',
   'captura.grosor1': 'Medium',

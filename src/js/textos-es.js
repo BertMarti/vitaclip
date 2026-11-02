@@ -224,6 +224,8 @@ export const es = {
   'captura.rectangulo': 'Rectángulo',
   'captura.marcador': 'Marcador',
   'captura.texto': 'Texto (Enter fija)',
+  'captura.pixelar': 'Pixelar',
+  'captura.numero': 'Numerar',
   'captura.color': 'Color',
   'captura.grosor0': 'Fino',
   'captura.grosor1': 'Medio',

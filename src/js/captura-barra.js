@@ -10,6 +10,7 @@ import { HERRAMIENTAS, COLORES, GROSORES } from './herramientas/dibujo.js';
 
 const ICONOS_HERRAMIENTA = {
   lapiz: 'lapiz', linea: 'linea', flecha: 'flecha', rectangulo: 'rectangulo', marcador: 'marcador', texto: 'letra',
+  pixelar: 'pixelar', numero: 'numero',
 };
 
 const mod = esMac ? '⌘' : 'Ctrl+';

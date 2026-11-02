@@ -2,7 +2,10 @@
 // Y la exportación del recorte a PNG en píxeles físicos con las anotaciones escaladas.
 
 import { centrosAsas, aFisicos } from './herramientas/seleccion.js';
-import { puntaFlecha, rectDeAnotacion, escalarAnotacion, OPACIDAD_MARCADOR } from './herramientas/dibujo.js';
+import {
+  puntaFlecha, rectDeAnotacion, escalarAnotacion, OPACIDAD_MARCADOR,
+  numeroDe, colorNumero,
+} from './herramientas/dibujo.js';
 
 const VELO = 'rgba(8, 10, 6, 0.55)';
 const LADO_ASA = 7;
@@ -48,6 +51,43 @@ function flecha(ctx, anotacion) {
   ctx.fill();
 }
 
+function pixelar(ctx, fuente, anotacion, escalaX = 1, escalaY = escalaX) {
+  const rect = rectDeAnotacion(anotacion);
+  const bloque = anotacion.grosor;
+  const pequeno = document.createElement('canvas');
+  pequeno.width = Math.max(1, Math.ceil(rect.ancho / bloque));
+  pequeno.height = Math.max(1, Math.ceil(rect.alto / bloque));
+  const pequenoCtx = pequeno.getContext('2d');
+  pequenoCtx.imageSmoothingEnabled = true;
+  pequenoCtx.drawImage(
+    fuente,
+    rect.x * escalaX, rect.y * escalaY, rect.ancho * escalaX, rect.alto * escalaY,
+    0, 0, pequeno.width, pequeno.height,
+  );
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(pequeno, rect.x, rect.y, rect.ancho, rect.alto);
+  ctx.restore();
+}
+
+function numero(ctx, anotacion, anotaciones, indice, escala = 1) {
+  const diametro = anotacion.grosor;
+  ctx.save();
+  ctx.fillStyle = anotacion.color;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.lineWidth = Math.max(1, escala);
+  ctx.beginPath();
+  ctx.arc(anotacion.x, anotacion.y, diametro / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = colorNumero(anotacion.color);
+  ctx.font = `700 ${diametro * 0.55}px ${FUENTE_TEXTO}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(numeroDe(anotaciones, indice)), anotacion.x, anotacion.y);
+  ctx.restore();
+}
+
 // Dibuja una anotación (en el sistema de coordenadas que tenga el contexto).
 export function dibujarAnotacion(ctx, anotacion) {
   ctx.save();
@@ -80,6 +120,9 @@ export function dibujarAnotacion(ctx, anotacion) {
       ctx.strokeRect(rect.x, rect.y, rect.ancho, rect.alto);
       break;
     }
+    case 'numero':
+      numero(ctx, anotacion, [anotacion], 0, anotacion.escala ?? 1);
+      break;
     case 'texto':
       ctx.font = `600 ${anotacion.grosor}px ${FUENTE_TEXTO}`;
       ctx.textBaseline = 'top';
@@ -89,6 +132,25 @@ export function dibujarAnotacion(ctx, anotacion) {
       break;
   }
   ctx.restore();
+}
+
+function dibujarNumeroConIndice(ctx, anotacion, anotaciones, indice) {
+  numero(ctx, anotacion, anotaciones, indice, anotacion.escala ?? 1);
+}
+
+function pintarAnotaciones(ctx, fuente, anotaciones, escalaX, escalaY) {
+  anotaciones.forEach(anotacion => {
+    if (anotacion.tipo === 'pixelar') {
+      pixelar(ctx, fuente, anotacion, escalaX, escalaY);
+    }
+  });
+  anotaciones.forEach((anotacion, indice) => {
+    if (anotacion.tipo === 'numero') {
+      dibujarNumeroConIndice(ctx, anotacion, anotaciones, indice);
+    } else if (anotacion.tipo !== 'pixelar') {
+      dibujarAnotacion(ctx, anotacion);
+    }
+  });
 }
 
 function velo(ctx, ancho, alto, seleccion) {
@@ -117,7 +179,7 @@ function asas(ctx, seleccion, acento) {
 
 // escena: {ancho, alto, imagen, seleccion, anotaciones, enCurso, mostrarAsas, acento} (todo en px CSS).
 export function pintarEscena(ctx, escena) {
-  const { ancho, alto, imagen, seleccion, anotaciones, enCurso, mostrarAsas, acento } = escena;
+  const { ancho, alto, imagen, seleccion, anotaciones, enCurso, mostrarAsas, acento, escalaX = 1, escalaY = escalaX } = escena;
   ctx.clearRect(0, 0, ancho, alto);
   if (imagen) {
     ctx.drawImage(imagen, 0, 0, ancho, alto);
@@ -130,12 +192,8 @@ export function pintarEscena(ctx, escena) {
   ctx.beginPath();
   ctx.rect(seleccion.x, seleccion.y, seleccion.ancho, seleccion.alto);
   ctx.clip();
-  for (const anotacion of anotaciones) {
-    dibujarAnotacion(ctx, anotacion);
-  }
-  if (enCurso) {
-    dibujarAnotacion(ctx, enCurso);
-  }
+  const todas = enCurso ? [...anotaciones, enCurso] : anotaciones;
+  pintarAnotaciones(ctx, imagen, todas, escalaX, escalaY);
   ctx.restore();
   ctx.save();
   ctx.strokeStyle = acento;
@@ -165,10 +223,24 @@ export async function exportarPng(imagen, seleccion, anotaciones, escalaX, escal
   lienzo.height = Math.max(1, fisico.alto);
   const ctx = lienzo.getContext('2d');
   ctx.drawImage(imagen, fisico.x, fisico.y, fisico.ancho, fisico.alto, 0, 0, fisico.ancho, fisico.alto);
+  const base = document.createElement('canvas');
+  base.width = lienzo.width;
+  base.height = lienzo.height;
+  base.getContext('2d').drawImage(lienzo, 0, 0);
   // Origen en px CSS exactamente sobre el borde físico redondeado, para que nada se desplace.
   const origen = { x: fisico.x / escalaX, y: fisico.y / escalaY };
-  for (const anotacion of anotaciones) {
-    dibujarAnotacion(ctx, escalarAnotacion(anotacion, origen, escalaX, escalaY));
+  const escaladas = anotaciones.map(anotacion => escalarAnotacion(anotacion, origen, escalaX, escalaY));
+  for (const [indice, anotacion] of escaladas.entries()) {
+    if (anotacion.tipo === 'pixelar') {
+      pixelar(ctx, base, anotacion);
+    }
+  }
+  for (const [indice, anotacion] of escaladas.entries()) {
+    if (anotacion.tipo === 'numero') {
+      dibujarNumeroConIndice(ctx, anotacion, escaladas, indice);
+    } else if (anotacion.tipo !== 'pixelar') {
+      dibujarAnotacion(ctx, anotacion);
+    }
   }
   const blob = await new Promise(resolver => lienzo.toBlob(resolver, 'image/png'));
   if (!blob) {
