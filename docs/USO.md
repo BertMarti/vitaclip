@@ -125,7 +125,7 @@ Vitaclip comprueba una vez al día si hay una versión más reciente en GitHub.
 - **Aviso:** si hay una actualización, verás una notificación y una opción nueva en el menú de la bandeja («Actualizar a X.Y.Z»).
 - **Instalación:** en **Ajustes → General** verás el botón **Actualizar y reiniciar**. La descarga se verifica mediante firma digital para asegurar que no ha sido modificada.
 - **Buscar ahora:** puedes forzar la comprobación en cualquier momento desde Ajustes.
-- **Apagar:** si prefieres hacerlo a mano, desactiva «Buscar actualizaciones automáticamente» en Ajustes.
+- **Apagar:** si prefieres hacerlo a mano, desactiva «Buscar actualizaciones» en Ajustes → General.
 - **Linux:** solo el formato **AppImage** se puede actualizar solo. Si usas `.deb` o `.rpm`, el botón **Descargar** te llevará a la web para bajar el paquete nuevo.
 
 ---
