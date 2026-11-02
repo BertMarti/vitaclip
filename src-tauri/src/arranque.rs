@@ -14,7 +14,8 @@ use tauri::AppHandle;
 fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
     let exe = std::env::current_exe().map_err(|x| x.to_string())?;
     let mut b = AutoLaunchBuilder::new();
-    b.set_app_name(&app.package_info().name).set_args(&["--oculto"]);
+    b.set_app_name(&app.package_info().name)
+        .set_args(&["--oculto"]);
     #[cfg(windows)]
     b.set_app_path(&format!("\"{}\"", exe.display()))
         .set_windows_enable_mode(auto_launch::WindowsEnableMode::CurrentUser);

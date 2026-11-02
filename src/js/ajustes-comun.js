@@ -24,6 +24,7 @@ export const datos = {
     pegarAuto: true,
     arrancarConSistema: true,
     pausado: false,
+    buscarActualizaciones: true,
     limiteHistorial: LIMITE_DEFECTO,
     retencionDias: 0,
     ignorar: [],

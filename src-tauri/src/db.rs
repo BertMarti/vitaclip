@@ -138,6 +138,7 @@ pub struct Ajustes {
     pub pegar_auto: bool,
     pub arrancar_con_sistema: bool,
     pub pausado: bool,
+    pub buscar_actualizaciones: bool,
     pub limite_historial: u32,
     /// Días que se conserva lo no fijado sin usar (0 = sin límite).
     pub retencion_dias: u32,
@@ -157,6 +158,7 @@ impl Default for Ajustes {
             pegar_auto: true,
             arrancar_con_sistema: true,
             pausado: false,
+            buscar_actualizaciones: true,
             limite_historial: 500,
             retencion_dias: 0,
             ignorar: vec![
@@ -196,6 +198,7 @@ impl<'de> Deserialize<'de> for Ajustes {
         campo!("pegarAuto", out.pegar_auto);
         campo!("arrancarConSistema", out.arrancar_con_sistema);
         campo!("pausado", out.pausado);
+        campo!("buscarActualizaciones", out.buscar_actualizaciones);
         campo!("limiteHistorial", out.limite_historial);
         campo!("retencionDias", out.retencion_dias);
         campo!("ignorar", out.ignorar);
@@ -726,6 +729,7 @@ mod tests {
         let a: Ajustes = serde_json::from_str("{}").unwrap();
         assert_eq!(a.idioma, "es");
         assert_eq!(a.ia.modelo, "llama3.2");
+        assert!(a.buscar_actualizaciones);
     }
 
     #[test]

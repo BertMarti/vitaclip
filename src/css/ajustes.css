@@ -126,6 +126,22 @@ body.pagina-ajustes {
   background: var(--superficie);
 }
 
+.aviso-actualizacion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio-grande);
+  background: var(--acento-suave);
+}
+
+.aviso-actualizacion p { margin: 0; }
+.actualizacion-error { color: var(--error); }
+.actualizacion-descarga { display: flex; align-items: center; gap: 8px; }
+.actualizacion-descarga progress { width: 180px; accent-color: var(--acento); }
+.actualizacion-control { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+
 .fila-ajuste {
   display: flex;
   align-items: center;

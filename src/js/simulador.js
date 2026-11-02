@@ -66,6 +66,7 @@ const AJUSTES_INICIALES = {
   pegarAuto: true,
   arrancarConSistema: true,
   pausado: false,
+  buscarActualizaciones: true,
   limiteHistorial: 500,
   ignorar: ['^\\d{13,19}$', '^(ghp_|sk-|AKIA|xox[abp]-)'],
   ia: { proveedor: 'ollama', url: 'http://localhost:11434/v1', modelo: 'llama3.2', clave: '' },
@@ -286,6 +287,19 @@ const comandos = {
   pausa_cambiar: ({ pausado }) => {
     ajustes.pausado = pausado;
   },
+  actualizacion_estado: () => ({ actual: '1.0.0', disponible: { version: '1.0.1', notas: 'Mejoras y correcciones', fecha: new Date().toISOString() }, comprobado: Date.now(), instalable: true, buscando: false }),
+  actualizacion_buscar: async () => {
+    await esperar(500);
+    emitir('actualizacion-disponible', { version: '1.0.1', notas: 'Mejoras y correcciones', fecha: new Date().toISOString() });
+    return comandos.actualizacion_estado();
+  },
+  actualizacion_instalar: async () => {
+    for (const descargado of [25, 50, 75, 100]) {
+      await esperar(100);
+      emitir('actualizacion-progreso', { descargado, total: 100 });
+    }
+  },
+  actualizacion_pagina: () => { console.info('[simulador] actualizacion_pagina'); },
   ...comandosCapturas(emitir, () => ajustes, guardarAjustes),
 };
 

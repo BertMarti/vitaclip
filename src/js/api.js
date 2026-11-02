@@ -29,6 +29,10 @@ export const fragmentoBorrar = id => invoke('fragmento_borrar', { id });
 // Ajustes
 export const ajustesLeer = () => invoke('ajustes_leer');
 export const ajustesGuardar = ajustes => invoke('ajustes_guardar', { ajustes });
+export const actualizacionEstado = () => invoke('actualizacion_estado');
+export const actualizacionBuscar = () => invoke('actualizacion_buscar');
+export const actualizacionInstalar = () => invoke('actualizacion_instalar');
+export const actualizacionPagina = () => invoke('actualizacion_pagina');
 
 // Utilidades
 export const qrSvg = texto => invoke('qr_svg', { texto });
