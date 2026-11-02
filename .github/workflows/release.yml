@@ -3,7 +3,12 @@ name: Publicar
 on:
   push:
     tags: ["v*"]
+  # A mano: rehace solo el final (latest.json, sumas y atestación) del borrador de una etiqueta ya compilada.
   workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: "Etiqueta ya compilada (por ejemplo v1.0.0)"
+        required: true
 
 # Por defecto, solo lectura; cada trabajo pide lo justo. Las acciones van fijadas a un commit (no a una etiqueta movible).
 permissions:
@@ -11,6 +16,7 @@ permissions:
 
 jobs:
   compilar:
+    if: github.event_name == 'push'
     permissions:
       contents: write
       actions: read
@@ -113,7 +119,10 @@ jobs:
   # Sumas SHA-256 de todos los instaladores y atestación de procedencia (se comprueba con `gh attestation verify`).
   sumas:
     needs: compilar
+    if: ${{ !cancelled() && (needs.compilar.result == 'success' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-24.04
+    env:
+      ETIQUETA: ${{ inputs.etiqueta || github.ref_name }}
     permissions:
       contents: write
       id-token: write
@@ -127,16 +136,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir artefactos
-          gh release download "${{ github.ref_name }}" -R "${{ github.repository }}" -D artefactos --skip-existing
+          gh release download "$ETIQUETA" -R "${{ github.repository }}" -D artefactos --skip-existing
           rm -f artefactos/SHA256SUMS.txt artefactos/latest.json
       # Con las firmas ya definitivas (también las que se rehacen tras SignPath).
       - name: Generar y subir latest.json para el actualizador
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view "${{ github.ref_name }}" -R "${{ github.repository }}" --json body -q .body > notas.txt
-          .github/scripts/generar-latest-json.sh artefactos "${{ github.ref_name }}" "${{ github.repository }}" "$PWD/notas.txt"
-          gh release upload "${{ github.ref_name }}" artefactos/latest.json -R "${{ github.repository }}" --clobber
+          gh release view "$ETIQUETA" -R "${{ github.repository }}" --json body -q .body > notas.txt
+          .github/scripts/generar-latest-json.sh artefactos "$ETIQUETA" "${{ github.repository }}" "$PWD/notas.txt"
+          gh release upload "$ETIQUETA" artefactos/latest.json -R "${{ github.repository }}" --clobber
       - name: Calcular y subir SHA256SUMS.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -144,7 +153,7 @@ jobs:
           cd artefactos
           sha256sum * > ../SHA256SUMS.txt
           cat ../SHA256SUMS.txt
-          gh release upload "${{ github.ref_name }}" ../SHA256SUMS.txt -R "${{ github.repository }}" --clobber
+          gh release upload "$ETIQUETA" ../SHA256SUMS.txt -R "${{ github.repository }}" --clobber
       - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: "artefactos/*"
