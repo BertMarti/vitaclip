@@ -1,5 +1,11 @@
 # Historial de versiones
 
+## [1.0.1] - 2026-11-02
+
+### Cambiado
+- Primera versión que llega sola por el actualizador: quien tenga la 1.0.0 la recibe con «Actualizar y reiniciar».
+- Publicación más robusta: el archivo que consulta el actualizador se genera en un único paso, cuando ya están todos los instaladores.
+
 ## [1.0.0] - 2026-11-02
 
 ### Añadido
