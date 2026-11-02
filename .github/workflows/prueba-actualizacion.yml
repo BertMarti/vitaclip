@@ -1,0 +1,40 @@
+name: Prueba del actualizador en Windows
+
+# Instala una versión ya publicada y comprueba, desde sus Ajustes, que el actualizador hace lo que debe con lo que hay en GitHub.
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: "Versión publicada que se instala (etiqueta)"
+        required: true
+        default: v1.0.0
+      esperada:
+        description: "Versión a la que debe actualizarse (vacío: debe decir que ya es la última)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  actualizar:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Descargar el instalador publicado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.desde }}" -R "${{ github.repository }}" -p "*_x64-setup.exe" -D instalador
+      - name: Instalar y actualizar como un usuario
+        shell: pwsh
+        env:
+          ESPERADA: ${{ inputs.esperada }}
+        run: |
+          $instalador = (Get-ChildItem instalador\*-setup.exe | Select-Object -First 1).FullName
+          ./.github/scripts/prueba-actualizacion-windows.ps1 -Instalador $instalador -Esperada $env:ESPERADA
+      - name: Guardar capturas
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: capturas-actualizacion
+          path: capturas/
