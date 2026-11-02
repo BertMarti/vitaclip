@@ -104,6 +104,24 @@
   user-select: text;
 }
 
+.editor-zona {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-clip {
+  width: 100%;
+  min-height: 128px;
+  resize: vertical;
+}
+
+.pista-editor {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 11px;
+}
+
 .contadores {
   margin: -4px 0 0;
   color: var(--texto-suave);

@@ -18,6 +18,7 @@ import { vistaHistorial } from './popup-historial.js';
 import { vistaFragmentos } from './popup-fragmentos.js';
 import { vistaCapturas } from './popup-capturas.js';
 import { vistaBoveda } from './popup-boveda.js';
+import { ampliar, alternar, textosParaPegar } from './herramientas/seleccion-lista.js';
 
 const VISTAS = {
   historial: vistaHistorial,
@@ -64,6 +65,11 @@ async function recargar({ mantener = false, clave = null } = {}) {
     return;
   }
   estado.elementos = Array.isArray(elementos) ? elementos : [];
+  if (estado.pestana === 'historial') {
+    const ids = new Set(idsDeClips());
+    estado.seleccion = estado.seleccion.filter(id => ids.has(id));
+    if (estado.ancla !== null && !ids.has(estado.ancla)) estado.ancla = null;
+  }
   estado.indice = indiceTrasCargar(anterior);
   pintar();
 }
@@ -79,8 +85,8 @@ function crearFila(elemento, indice) {
   const fila = vistaActual().fila(elemento, indice);
   fila.classList.add('fila');
   fila.setAttribute('role', 'option');
-  fila.addEventListener('click', () => {
-    seleccionar(indice);
+  fila.addEventListener('click', evento => {
+    seleccionar(indice, false, evento.ctrlKey || evento.metaKey);
     enfocarBuscador();
   });
   fila.addEventListener('dblclick', () => {
@@ -139,8 +145,10 @@ function pintar() {
 function marcarSeleccion() {
   filas.forEach((fila, indice) => {
     const elegida = indice === estado.indice;
+    const multiple = estado.seleccion.includes(estado.elementos[indice]?.id);
     fila.classList.toggle('seleccionada', elegida);
-    fila.setAttribute('aria-selected', String(elegida));
+    fila.classList.toggle('seleccion-multiple', multiple);
+    fila.setAttribute('aria-selected', String(elegida || multiple));
     fila.id = `opcion-${indice}`;
     fila.setAttribute('role', 'option');
   });
@@ -154,16 +162,38 @@ function marcarSeleccion() {
   filas[estado.indice]?.scrollIntoView({ block: 'nearest' });
 }
 
-function seleccionar(indice) {
+function esClip(elemento) {
+  return elemento?.tipo === 'texto' || elemento?.tipo === 'imagen';
+}
+
+function idsDeClips() {
+  return estado.elementos.filter(esClip).map(elemento => elemento.id);
+}
+
+function seleccionar(indice, ampliarRango = false, alternarUno = false) {
   if (!estado.elementos.length) {
     return;
   }
   const nuevo = Math.max(0, Math.min(estado.elementos.length - 1, indice));
-  if (nuevo !== estado.indice) {
-    estado.indice = nuevo;
-    vistaActual().alSeleccionar?.(elementoActual());
+  estado.indice = nuevo;
+  const elemento = elementoActual();
+  if (estado.pestana === 'historial' && esClip(elemento)) {
+    const id = elemento.id;
+    if (alternarUno) {
+      estado.seleccion = alternar(estado.seleccion, id);
+      estado.ancla = id;
+    } else if (ampliarRango) {
+      estado.ancla ??= id;
+      estado.seleccion = ampliar(estado.seleccion, estado.ancla, id, idsDeClips());
+    } else {
+      estado.seleccion = [];
+      estado.ancla = id;
+    }
+    vistaActual().alSeleccionar?.(elemento);
   }
   marcarSeleccion();
+  // El pie dice cuántos hay seleccionados.
+  pintarPie();
 }
 
 function activar(indice = estado.indice) {
@@ -171,7 +201,13 @@ function activar(indice = estado.indice) {
   if (!elemento) {
     return;
   }
-  seleccionar(indice);
+  const esPegadoMultiple = estado.pestana === 'historial' && estado.seleccion.length >= 2
+    && estado.seleccion.includes(elemento.id);
+  if (!esPegadoMultiple) seleccionar(indice);
+  if (esPegadoMultiple) {
+    ui.pegarSeleccionados();
+    return;
+  }
   vistaActual().activar(elemento);
 }
 
@@ -255,6 +291,8 @@ function cambiarPestana(id) {
     }
     estado.pestana = id;
     estado.indice = 0;
+    estado.seleccion = [];
+    estado.ancla = null;
     estado.panel = false;
     pintarPestanas();
     recargar();
@@ -276,6 +314,13 @@ function entrarPanel() {
 }
 
 function escape() {
+  if (!estado.panel && estado.seleccion.length) {
+    estado.seleccion = [];
+    estado.ancla = null;
+    marcarSeleccion();
+    pintarModo();
+    return;
+  }
   if (estado.panel) {
     cerrarPanel();
     return;
@@ -300,6 +345,8 @@ function volver() {
 
 function alEscribir() {
   estado.consulta = nodos.buscador.value;
+  estado.seleccion = [];
+  estado.ancla = null;
   if (estado.panel) {
     vistaActual().alCerrarPanel?.();
     estado.panel = false;
@@ -327,6 +374,8 @@ async function alMostrarPopup() {
   estado.consulta = '';
   estado.pestana = 'historial';
   estado.indice = 0;
+  estado.seleccion = [];
+  estado.ancla = null;
   estado.panel = false;
   await refrescarEntorno();
   await cargarFragmentos();
@@ -366,7 +415,7 @@ function conectarEventos() {
   hacerArrastrable(nodos.cabecera);
   hacerArrastrable(nodos.pie);
   document.addEventListener('keydown', crearTeclado({
-    mover: paso => seleccionar(estado.indice + paso),
+    mover: (paso, ampliarRango) => seleccionar(estado.indice + paso, ampliarRango),
     activar,
     entrarPanel,
     escape,
@@ -374,6 +423,7 @@ function conectarEventos() {
     cambiarPestana,
     abrirAjustes,
     teclasVista: evento => vistaActual().teclas?.(evento, elementoActual()),
+    editar: () => vistaActual().editar?.(elementoActual()),
   }));
   intentar(() => api.alEvento('historial-cambiado', alCambiarHistorial));
   intentar(() => api.alEvento('popup-mostrado', alMostrarPopup));
@@ -391,6 +441,33 @@ Object.assign(ui, {
   seleccionar,
   abrirPanel,
   cerrarPanel,
+  limpiarSeleccion: () => {
+    estado.seleccion = [];
+    estado.ancla = null;
+    marcarSeleccion();
+    pintarModo();
+  },
+  seleccionados: () => estado.elementos.filter(elemento => estado.seleccion.includes(elemento.id)),
+  pegarSeleccionados: async () => {
+    const resultado = textosParaPegar(estado.elementos, estado.seleccion);
+    if (!resultado.texto) {
+      aviso(t('aviso.soloTextos'), 'info');
+      return;
+    }
+    estado.seleccion = [];
+    estado.ancla = null;
+    await pegarTexto(resultado.texto);
+    marcarSeleccion();
+    pintarModo();
+  },
+  borrarSeleccionados: async () => {
+    const ids = [...estado.seleccion];
+    estado.seleccion = [];
+    estado.ancla = null;
+    for (const id of ids) await intentar(() => api.clipBorrar(id));
+    await recargar({ mantener: true });
+  },
+  editar: () => vistaActual().editar?.(elementoActual()),
 });
 
 async function iniciar() {

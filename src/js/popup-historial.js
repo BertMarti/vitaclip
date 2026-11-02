@@ -10,7 +10,7 @@ import { resaltar, vistaPrevia, haceCuanto, esUrl } from './herramientas/buscar.
 import { esCalculo, calcular, formatear } from './herramientas/calcular.js';
 import { detectar, aRgb } from './herramientas/color.js';
 import { estado, pegarTexto, pegarClip, fijarClip, borrarClip } from './popup-estado.js';
-import { detalleClip, detalleCalculo, imagenDeClip } from './popup-detalle.js';
+import { detalleClip, detalleCalculo, imagenDeClip, editarClip, cerrarEdicion } from './popup-detalle.js';
 import { pegarFragmento, detalleFragmentoBreve } from './popup-fragmentos.js';
 
 // --- Filas especiales: cálculo y «;abreviatura»
@@ -180,7 +180,17 @@ function teclas(evento, elemento) {
   }
   if (evento.key === 'Delete' && (!estado.consulta || evento.shiftKey)) {
     evento.preventDefault();
+    if (estado.seleccion.length >= 2) {
+      ui.borrarSeleccionados();
+      return;
+    }
     borrarClip(elemento);
+  }
+}
+
+function editar(elemento) {
+  if (elemento?.tipo === 'texto') {
+    editarClip(elemento);
   }
 }
 
@@ -214,4 +224,6 @@ export const vistaHistorial = {
   teclas,
   grupo,
   tituloPanel,
+  editar,
+  alCerrarPanel: cerrarEdicion,
 };

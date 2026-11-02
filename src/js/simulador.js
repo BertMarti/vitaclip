@@ -54,6 +54,7 @@ let fragmentos = [
 const boveda = { existe: false, abierta: false, contrasena: '', entradas: [] };
 const oyentes = new Map();
 let siguienteId = 100;
+let ultimoPegado = '';
 
 const AJUSTES_INICIALES = {
   atajos: { popup: 'CommandOrControl+Alt+KeyV', captura: 'CommandOrControl+Alt+KeyC', video: 'CommandOrControl+Alt+KeyR' },
@@ -101,8 +102,10 @@ function emitir(nombre, payload = null) {
 
 export const vitaclipSimulador = {
   emitir,
+  get ultimoPegado() { return ultimoPegado; },
   reiniciar() {
     guardar('ajustes-v2', AJUSTES_INICIALES);
+    ultimoPegado = '';
   },
 };
 
@@ -181,7 +184,10 @@ const comandos = {
     if (!clips.some(c => c.id === id)) throw 'Clip no encontrado';
     return false;
   },
-  texto_pegar: () => true,
+  texto_pegar: ({ texto }) => {
+    ultimoPegado = String(texto ?? '');
+    return true;
+  },
   clip_fijar: ({ id, fijado }) => {
     clips = clips.map(c => (c.id === id ? { ...c, fijado } : c));
     emitir('historial-cambiado');

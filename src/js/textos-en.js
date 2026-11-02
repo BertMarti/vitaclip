@@ -50,6 +50,8 @@ export const en = {
   'clip.usos': '{n} {n|use|uses}',
   'clip.contadores': '{caracteres} {caracteres|character|characters} · {palabras} {palabras|word|words} · {lineas} {lineas|line|lines}',
   'detalle.pegar': 'Paste',
+  'detalle.editar': 'Edit',
+  'detalle.pistaEditar': '{mod} pastes · Esc cancels',
   'detalle.fijar': 'Pin',
   'detalle.soltar': 'Unpin',
   'detalle.borrar': 'Delete',
@@ -60,6 +62,8 @@ export const en = {
   'qr.titulo': 'Show the QR code',
   'qr.alt': 'QR code of the text',
   'qr.demasiadoLargo': 'Too long for a QR code (max. 1500 characters)',
+  'pie.seleccionados': '{n} selected · Enter pastes all',
+  'aviso.soloTextos': 'Only text clips can be pasted together',
 
   'calculo.etiqueta': 'calculation',
   'calculo.titulo': 'Calculator',

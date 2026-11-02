@@ -64,7 +64,9 @@ function indicadorGrabando() {
 }
 
 export function pintarPie() {
-  const pista = estado.panel ? t('pie.pistaPanel') : t(estado.pestana === 'capturas' ? 'pie.pistaCapturas' : 'pie.pistaLista');
+  const pista = !estado.panel && estado.pestana === 'historial' && estado.seleccion.length >= 2
+    ? t('pie.seleccionados', { n: estado.seleccion.length })
+    : estado.panel ? t('pie.pistaPanel') : t(estado.pestana === 'capturas' ? 'pie.pistaCapturas' : 'pie.pistaLista');
   const atajo = legible(estado.ajustes.atajos.popup);
   poner(nodos.pie,
     el('span', { class: 'pie-pista', text: pista }),

@@ -190,10 +190,29 @@ body.popup {
 }
 
 .fila.seleccionada {
-  background: var(--acento-suave);
+  background: var(--acento-fuerte);
 }
 
 .fila.seleccionada::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acento);
+}
+
+.fila.seleccion-multiple {
+  background: var(--acento-suave);
+}
+
+.fila.seleccionada.seleccion-multiple {
+  background: var(--acento-fuerte);
+}
+
+.fila.seleccion-multiple::before {
   content: "";
   position: absolute;
   top: 7px;
