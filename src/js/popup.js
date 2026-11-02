@@ -11,7 +11,7 @@ import { t, setIdioma } from './i18n.js';
 import { icono } from './iconos.js';
 import { aplicarTema, intentar, hacerArrastrable, aviso } from './comun.js';
 import { completarAtajos } from './atajos.js';
-import { estado, ui, elementoActual, cargarFragmentos, abrirAjustes } from './popup-estado.js';
+import { estado, ui, elementoActual, cargarFragmentos, abrirAjustes, pegarTexto } from './popup-estado.js';
 import { nodos, pintarMarco, pintarPestanas, pintarPie, enfocarBuscador } from './popup-marco.js';
 import { crearTeclado, primerNavegable } from './popup-teclado.js';
 import { vistaHistorial } from './popup-historial.js';
@@ -175,6 +175,7 @@ function seleccionar(indice, ampliarRango = false, alternarUno = false) {
     return;
   }
   const nuevo = Math.max(0, Math.min(estado.elementos.length - 1, indice));
+  const previo = elementoActual();
   estado.indice = nuevo;
   const elemento = elementoActual();
   if (estado.pestana === 'historial' && esClip(elemento)) {
@@ -183,7 +184,8 @@ function seleccionar(indice, ampliarRango = false, alternarUno = false) {
       estado.seleccion = alternar(estado.seleccion, id);
       estado.ancla = id;
     } else if (ampliarRango) {
-      estado.ancla ??= id;
+      // Shift+flecha empieza en el elemento donde estaba el cursor, como en cualquier lista.
+      estado.ancla ??= esClip(previo) ? previo.id : id;
       estado.seleccion = ampliar(estado.seleccion, estado.ancla, id, idsDeClips());
     } else {
       estado.seleccion = [];

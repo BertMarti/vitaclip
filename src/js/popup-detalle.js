@@ -106,7 +106,8 @@ function botonera(clip) {
   botonQr.disabled = largo;
   return el('div', { class: 'botonera' },
     clip.tipo === 'texto' && boton(t('detalle.editar'), () => iniciarEdicion(clip), { navegable: true }),
-    boton(t('detalle.pegar'), () => pegarClip(clip), { clase: 'boton-primario', titulo: '↵', navegable: true }),
+    // Mientras se edita, «Pegar» pega lo editado.
+    boton(t('detalle.pegar'), () => (edicion?.id === clip.id ? pegarTexto(edicion.texto) : pegarClip(clip)), { clase: 'boton-primario', titulo: '↵', navegable: true }),
     boton(t(clip.fijado ? 'detalle.soltar' : 'detalle.fijar'), () => fijarClip(clip), { icono: 'fijado', navegable: true }),
     boton(t('detalle.borrar'), () => borrarClip(clip), { clase: 'boton-peligro', navegable: true }),
     clip.tipo === 'texto' && botonQr,
