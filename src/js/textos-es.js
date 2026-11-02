@@ -55,6 +55,8 @@ export const es = {
   'clip.usos': '{n} {n|uso|usos}',
   'clip.contadores': '{caracteres} {caracteres|carácter|caracteres} · {palabras} {palabras|palabra|palabras} · {lineas} {lineas|línea|líneas}',
   'detalle.pegar': 'Pegar',
+  'detalle.editar': 'Editar',
+  'detalle.pistaEditar': '{mod} pega · Esc cancela',
   'detalle.fijar': 'Fijar',
   'detalle.soltar': 'Soltar',
   'detalle.borrar': 'Borrar',
@@ -65,6 +67,8 @@ export const es = {
   'qr.titulo': 'Ver el código QR',
   'qr.alt': 'Código QR del texto',
   'qr.demasiadoLargo': 'Demasiado largo para un QR (máx. 1500 caracteres)',
+  'pie.seleccionados': '{n} seleccionados · Enter pega todo',
+  'aviso.soloTextos': 'Solo se pueden pegar varios textos a la vez',
 
   // Cálculo
   'calculo.etiqueta': 'cálculo',

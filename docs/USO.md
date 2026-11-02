@@ -43,7 +43,10 @@ Todo lo que copias entra arriba de la lista. Las entradas **fijadas** no se borr
 
 **Teclado:**
 - `↑` `↓`: navegar por la lista.
+- `Shift+↑` `Shift+↓`: ampliar la selección.
+- `Ctrl+clic` (`⌘+clic` en Mac): añadir o quitar un elemento.
 - `Enter`: pegar el elemento seleccionado.
+- Con varios seleccionados, `Enter` pega todos los textos juntos.
 - `Ctrl+1…9`: pegar rápidamente uno de los primeros 9 elementos.
 - `Ctrl+P`: fijar o soltar el elemento.
 - `Supr`: borrar elemento (o `Shift+Supr` mientras buscas).
@@ -56,6 +59,7 @@ Todo lo que copias entra arriba de la lista. Las entradas **fijadas** no se borr
 
 ## Detalle y transformaciones
 Al abrir el detalle (`→` o `Tab`), verás el contenido completo y opciones para transformarlo:
+- **Editar:** pulsa **Editar** o `E` para modificar una copia. `Ctrl+Enter` (`⌘↩` en Mac) pega el texto editado; `Esc` cancela.
 - **Transformar:** MAYÚSCULAS, minúsculas, quitar tildes, JSON bonito, Base64, etc. Elige una y pulsa `Enter` para pegarla directamente.
 - **Calculadora:** escribe una operación que empiece por `=` en el buscador (ej: `=21*1,21` o `=200*15%`) y el resultado aparecerá arriba.
 

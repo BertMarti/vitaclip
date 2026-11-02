@@ -11,6 +11,8 @@ export const estado = {
   consulta: '',
   elementos: [],
   indice: 0,
+  seleccion: [],
+  ancla: null,
   // true mientras el panel de detalle sustituye a la lista.
   panel: false,
   ajustes: { atajos: { ...ATAJOS_DEFECTO }, tema: 'sistema', idioma: 'es' },
@@ -27,6 +29,13 @@ export const ui = {
   cambiarPestana: () => {},
   abrirPanel: () => {},
   cerrarPanel: () => {},
+  limpiarSeleccion: () => {},
+  seleccionados: () => [],
+  pegarSeleccionados: async () => {},
+  borrarSeleccionados: async () => {},
+  editar: () => {},
+  editarDetalle: () => {},
+  cerrarEdicion: () => {},
 };
 
 export function elementoActual() {

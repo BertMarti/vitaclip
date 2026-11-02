@@ -6,7 +6,7 @@ import * as api from './api.js';
 import { el, poner } from './dom.js';
 import { t, idiomaActual } from './i18n.js';
 import { icono } from './iconos.js';
-import { boton, mensajeError } from './comun.js';
+import { boton, mensajeError, esMac } from './comun.js';
 import { haceCuanto, vistaPrevia } from './herramientas/buscar.js';
 import { TRANSFORMACIONES, transformar, contar } from './herramientas/transformar.js';
 import { detectar, aHex, aRgb, aHsl } from './herramientas/color.js';
@@ -16,6 +16,7 @@ import { seccionIa } from './popup-ia.js';
 const MAX_QR = 1500;
 const imagenes = new Map();
 let qrAbiertoDe = null;
+let edicion = null;
 
 // Caché de imágenes: una sola petición por clip.
 export function imagenDeClip(id) {
@@ -104,11 +105,54 @@ function botonera(clip) {
   });
   botonQr.disabled = largo;
   return el('div', { class: 'botonera' },
+    clip.tipo === 'texto' && boton(t('detalle.editar'), () => iniciarEdicion(clip), { navegable: true }),
     boton(t('detalle.pegar'), () => pegarClip(clip), { clase: 'boton-primario', titulo: '↵', navegable: true }),
     boton(t(clip.fijado ? 'detalle.soltar' : 'detalle.fijar'), () => fijarClip(clip), { icono: 'fijado', navegable: true }),
     boton(t('detalle.borrar'), () => borrarClip(clip), { clase: 'boton-peligro', navegable: true }),
     clip.tipo === 'texto' && botonQr,
   );
+}
+
+function iniciarEdicion(clip) {
+  edicion = { id: clip.id, texto: clip.texto };
+  ui.repintarDetalle();
+  queueMicrotask(() => document.querySelector('.editor-clip')?.focus());
+}
+
+function cancelarEdicion() {
+  edicion = null;
+}
+
+export function editarClip(clip) {
+  if (clip?.tipo === 'texto') iniciarEdicion(clip);
+}
+
+export function cerrarEdicion() {
+  cancelarEdicion();
+}
+
+function contenidoTexto(clip) {
+  const texto = edicion?.id === clip.id ? edicion.texto : clip.texto;
+  if (!edicion || edicion.id !== clip.id) return el('pre', { class: 'contenido-clip', text: texto });
+  const cuadro = el('textarea', { class: 'contenido-clip editor-clip', value: texto, on: {
+    input: evento => { edicion.texto = evento.target.value; },
+    keydown: evento => {
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
+        evento.stopPropagation();
+        cancelarEdicion();
+        ui.repintarDetalle();
+      } else if (evento.key === 'Enter' && (evento.ctrlKey || evento.metaKey)) {
+        evento.preventDefault();
+        evento.stopPropagation();
+        pegarTexto(evento.target.value);
+      }
+    },
+  } });
+  return el('div', { class: 'editor-zona' }, cuadro, el('p', {
+    class: 'pista-editor',
+    text: t('detalle.pistaEditar', { mod: esMac ? '⌘↩' : 'Ctrl+Enter' }),
+  }));
 }
 
 // --- Transformaciones (navegables) con vista previa del resultado
@@ -121,16 +165,17 @@ function previa(id, texto) {
   }
 }
 
-function seccionTransformaciones(texto) {
+// `fuente` devuelve el texto en el momento de usarlo: mientras se edita, es lo que hay escrito en el cuadro.
+function seccionTransformaciones(fuente) {
   const resultado = el('p', { class: 'vista-resultado', text: t('transformar.ayuda') });
   const mostrar = id => {
-    const { texto: muestra, error } = previa(id, texto);
+    const { texto: muestra, error } = previa(id, fuente());
     resultado.textContent = muestra ? `→ ${muestra}` : '→ ∅';
     resultado.classList.toggle('error-texto', error);
   };
   const ejecutar = id => {
     try {
-      pegarTexto(transformar(id, texto));
+      pegarTexto(transformar(id, fuente()));
     } catch (error) {
       resultado.textContent = mensajeError(error);
       resultado.classList.add('error-texto');
@@ -159,14 +204,15 @@ export function detalleClip(clip) {
     return el('div', { class: 'detalle-clip' }, cabecera(clip), contenidoImagen(clip), botonera(clip));
   }
   const color = detectar(clip.texto);
+  const texto = edicion?.id === clip.id ? edicion.texto : clip.texto;
   return el('div', { class: 'detalle-clip' },
     cabecera(clip),
-    el('pre', { class: 'contenido-clip', text: clip.texto }),
-    contadores(clip.texto),
+    contenidoTexto(clip),
+    contadores(texto),
     botonera(clip),
     qrAbiertoDe === clip.id && zonaQr(clip),
     color && bloqueColor(color),
-    seccionTransformaciones(clip.texto),
+    seccionTransformaciones(() => (edicion?.id === clip.id ? edicion.texto : clip.texto)),
     seccionIa(clip),
   );
 }

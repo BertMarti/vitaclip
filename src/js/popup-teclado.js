@@ -13,7 +13,7 @@ function zonaDe(nodo) {
   if (esCampo(nodo)) {
     return 'campo';
   }
-  if (nodo instanceof HTMLElement && nodo.closest('.panel-detalle, .pantalla') && nodo.matches('button, a')) {
+  if (nodo instanceof HTMLElement && nodo.closest('.panel-detalle, .pantalla')) {
     return 'panel';
   }
   return 'lista';
@@ -36,6 +36,11 @@ function moverFoco(evento, paso) {
 }
 
 function teclasPanel(evento, control) {
+  if (!evento.ctrlKey && !evento.metaKey && evento.code === 'KeyE') {
+    evento.preventDefault();
+    control.editar?.();
+    return;
+  }
   if (evento.key === 'ArrowDown' || (evento.key === 'Tab' && !evento.shiftKey)) {
     evento.preventDefault();
     moverFoco(evento, 1);
@@ -67,7 +72,7 @@ function numeroDe(evento) {
 function teclasMovimiento(evento, control, mod) {
   const pasos = { ArrowDown: 1, ArrowUp: -1, PageDown: 8, PageUp: -8 };
   if (pasos[evento.key]) {
-    control.mover(pasos[evento.key]);
+    control.mover(pasos[evento.key], evento.shiftKey);
     return true;
   }
   if (mod && (evento.code === 'KeyJ' || evento.code === 'KeyK')) {
