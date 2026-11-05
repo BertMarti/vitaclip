@@ -130,3 +130,13 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
   Automation (WebView2 se expone bien; se buscan las ventanas por el proceso `vitaclip`, no por el título). Sin `esperada` debe decir
   «Tienes la última versión»; con ella, «Actualizar y reiniciar» y comprobar registro, ejecutable y que se reabre. El 2/11 pasó
   1.0.0 → 1.0.1. Ojo: la subida de un archivo a la publicación puede fallar suelta («Error creating policy»): `gh run rerun --failed`.
+
+## Sonido en los vídeos (1.1, 2026-11-02)
+- Diseño en `docs/specs/2026-11-02-vitaclip-v11-sonido.md`. `audio.rs`: cpal 0.18 (sonido del equipo = entrada sobre la salida
+  predeterminada; en Linux host PipeWire) → 48 kHz estéreo → mezcla al reloj de pared → AAC-LC con fdk-aac (ADTS) → muxide.
+- En macOS el loopback se abre con `default_output_config` (los altavoces no tienen configuración de entrada) y necesita 14.6+.
+- `cpal` en Linux necesita `libasound2-dev` al compilar (ya en ci.yml y release.yml; en la Pi está instalado).
+- Todo el MP4 cuenta desde el primer fotograma (en Wayland llega tras el diálogo); el audio de antes se tira.
+- Probar el audio de verdad sin interfaz: `VITACLIP_AAC=/tmp/x.aac cargo test --lib audio_real -- --ignored` mientras suena
+  `pw-play tono.wav`. En Xvfb el selector de zona no se abre, así que la grabación completa no se puede pulsar ahí.
+- Luna entregó sin compilar (faltaba ALSA) y con la API de cpal 0.17: revisar siempre que lo entregado compila.
