@@ -97,7 +97,7 @@ Usa el mismo selector de zona:
 - **Pantalla completa:** pulsa `F`.
 - **Durante la grabación:** verás un indicador con el tiempo transcurrido. Para detener, pulsa el botón **Detener** o usa de nuevo el atajo de vídeo.
 - **Resultado:** se guarda un vídeo **MP4 (H.264)** en `Vídeos/Vitaclip` (o la carpeta que elijas).
-- **Ajustes:** puedes elegir entre 30 o 60 fps y calidad Alta o Máxima. (Nota: en esta versión no se graba sonido).
+- **Ajustes:** puedes elegir entre 30 o 60 fps, calidad Alta o Máxima y activar por separado el sonido del equipo y el micrófono. El sonido del equipo en macOS necesita macOS 14.6 o posterior.
 
 ---
 

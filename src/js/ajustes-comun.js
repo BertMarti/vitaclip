@@ -18,7 +18,7 @@ export const datos = {
     atajos: { ...ATAJOS_DEFECTO },
     ventana: { modo: 'raton', x: null, y: null, ancho: 380, alto: 480 },
     capturas: { carpeta: '' },
-    video: { carpeta: '', fps: 30, calidad: 'alta' },
+    video: { carpeta: '', fps: 30, calidad: 'alta', sonidoEquipo: true, microfono: false },
     tema: 'sistema',
     idioma: 'es',
     pegarAuto: true,

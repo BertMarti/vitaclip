@@ -114,6 +114,8 @@ pub struct Video {
     pub carpeta: String,
     pub fps: u32,
     pub calidad: String,
+    pub sonido_equipo: bool,
+    pub microfono: bool,
 }
 
 impl Default for Video {
@@ -122,6 +124,8 @@ impl Default for Video {
             carpeta: String::new(),
             fps: 30,
             calidad: "alta".into(),
+            sonido_equipo: true,
+            microfono: false,
         }
     }
 }
@@ -730,6 +734,14 @@ mod tests {
         assert_eq!(a.idioma, "es");
         assert_eq!(a.ia.modelo, "llama3.2");
         assert!(a.buscar_actualizaciones);
+    }
+
+    #[test]
+    fn video_viejo_usa_los_valores_de_sonido() {
+        let a: Ajustes =
+            serde_json::from_str(r#"{"video":{"carpeta":"","fps":30,"calidad":"alta"}}"#).unwrap();
+        assert!(a.video.sonido_equipo);
+        assert!(!a.video.microfono);
     }
 
     #[test]

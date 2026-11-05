@@ -340,7 +340,11 @@ export const es = {
   'capturasAjustes.calidadDescripcion': 'Siempre a la resolución nativa de la pantalla, en MP4 H.264.',
   'capturasAjustes.alta': 'Alta',
   'capturasAjustes.maxima': 'Máxima (archivos más grandes)',
-  'capturasAjustes.nota': 'Graba la pantalla sin sonido. En Mac pide permiso de Grabación de pantalla; en Wayland el sistema te pedirá elegir la pantalla.',
+  'capturasAjustes.sonidoEquipo': 'Grabar el sonido del equipo',
+  'capturasAjustes.sonidoEquipoDescripcion': 'Lo que suena por los altavoces: vídeos, llamadas, avisos.',
+  'capturasAjustes.microfono': 'Grabar el micrófono',
+  'capturasAjustes.microfonoDescripcion': 'Tu voz, con el micrófono predeterminado del sistema.',
+  'capturasAjustes.nota': 'En Mac pide permiso de Grabación de pantalla; el sonido del equipo necesita macOS 14.6 o posterior. En Wayland el sistema te pedirá elegir la pantalla.',
 
   // Privacidad
   'privacidad.descripcion': 'Todo se guarda solo en tu equipo. Sin telemetría ni cuentas.',

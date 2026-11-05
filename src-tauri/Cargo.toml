@@ -44,6 +44,8 @@ tauri-plugin-updater = "2"
 xcap = "0.9.8"
 openh264 = "0.9"
 muxide = "0.5"
+cpal = "0.18"
+fdk-aac = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 
@@ -57,6 +59,7 @@ windows-sys = { version = "0.59", features = [
 
 # Para leer las marcas «no guardar» de los gestores de contraseñas (sensible.rs); mismas versiones que ya usa arboard.
 [target.'cfg(target_os = "linux")'.dependencies]
+cpal = { version = "0.18", features = ["pipewire"] }
 wl-clipboard-rs = "0.9"
 x11rb = "0.13"
 

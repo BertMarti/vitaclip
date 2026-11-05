@@ -324,7 +324,11 @@ export const en = {
   'capturasAjustes.calidadDescripcion': 'Always at the screen’s native resolution, as H.264 MP4.',
   'capturasAjustes.alta': 'High',
   'capturasAjustes.maxima': 'Maximum (bigger files)',
-  'capturasAjustes.nota': 'Records the screen without sound. On Mac it asks for Screen Recording permission; on Wayland the system will ask you to pick the screen.',
+  'capturasAjustes.sonidoEquipo': 'Record computer sound',
+  'capturasAjustes.sonidoEquipoDescripcion': 'Whatever plays through your speakers: videos, calls, alerts.',
+  'capturasAjustes.microfono': 'Record microphone',
+  'capturasAjustes.microfonoDescripcion': "Your voice, using the system's default microphone.",
+  'capturasAjustes.nota': 'On Mac it asks for Screen Recording permission; computer sound needs macOS 14.6 or later. On Wayland the system will ask you to pick the screen.',
 
   'privacidad.descripcion': 'Everything stays on your computer. No telemetry, no accounts.',
   'privacidad.patrones': 'Patterns to ignore',

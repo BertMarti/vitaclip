@@ -88,7 +88,7 @@ terminar, pulsa **Detener** o el mismo atajo.
 - **MP4 H.264** a la resolución nativa de tu pantalla, a **30 o 60 fps**, con calidad **Alta** o **Máxima**.
 - Se guarda en `Vídeos/Vitaclip` o en la carpeta que elijas en **Ajustes → Capturas y vídeo**.
 - En Windows y Mac el indicador no sale en el vídeo.
-- De momento graba **sin sonido**.
+- Graba **el sonido del equipo** (lo que suena por los altavoces) y, si lo activas, **el micrófono**. En macOS, el sonido del equipo necesita macOS 14.6 o posterior.
 
 ## Todo lo que trae
 
@@ -136,3 +136,4 @@ Hecho con [Tauri 2](https://tauri.app) (Rust) y una interfaz en HTML, CSS y Java
 ## Licencia
 
 [MIT](LICENSE): úsalo, modifícalo y compártelo libremente.
+El codificador de sonido de los vídeos (Fraunhofer FDK AAC) va con su propia licencia: ver [LICENCIAS-TERCEROS.md](LICENCIAS-TERCEROS.md).

@@ -1,6 +1,7 @@
 mod actualizar;
 mod arranque;
 mod atajo;
+mod audio;
 mod boveda;
 mod captura;
 mod comandos;

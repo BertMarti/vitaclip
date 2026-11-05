@@ -6,7 +6,7 @@ import { el } from './dom.js';
 import { t } from './i18n.js';
 import { boton, intentar } from './comun.js';
 import {
-  datos, pagina, guardar, cabeceraSeccion, filaAjuste, grupoAjustes, segmentado, selector,
+  datos, pagina, guardar, cabeceraSeccion, filaAjuste, grupoAjustes, segmentado, selector, interruptor,
 } from './ajustes-comun.js';
 
 // tipo del contrato ("capturas" | "videos") → campo de Ajustes donde vive su carpeta.
@@ -66,6 +66,14 @@ export function seccionCapturas() {
       filaCarpeta('videos'),
       filaAjuste('capturasAjustes.fps', 'capturasAjustes.fpsDescripcion', controlFps()),
       filaAjuste('capturasAjustes.calidad', 'capturasAjustes.calidadDescripcion', controlCalidad()),
+      filaAjuste('capturasAjustes.sonidoEquipo', 'capturasAjustes.sonidoEquipoDescripcion',
+        interruptor(datos.ajustes.video.sonidoEquipo,
+          async valor => { await guardarVideo({ sonidoEquipo: valor }); pagina.pintar(); },
+          t('capturasAjustes.sonidoEquipo'))),
+      filaAjuste('capturasAjustes.microfono', 'capturasAjustes.microfonoDescripcion',
+        interruptor(datos.ajustes.video.microfono,
+          async valor => { await guardarVideo({ microfono: valor }); pagina.pintar(); },
+          t('capturasAjustes.microfono'))),
     ),
     el('p', { class: 'nota-aviso nota-video', text: t('capturasAjustes.nota') }),
   ];

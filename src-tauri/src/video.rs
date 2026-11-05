@@ -1,4 +1,4 @@
-use crate::{db, estado::Estado, util};
+use crate::{audio, db, estado::Estado, util};
 use openh264::{
     encoder::{
         BitRate, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, QpRange, RateControlMode,
@@ -34,6 +34,7 @@ pub struct Grabacion {
     pub ruta: PathBuf,
     detener: Arc<AtomicBool>,
     captura: Option<JoinHandle<()>>,
+    audio: Option<JoinHandle<()>>,
     codificacion: Option<JoinHandle<Result<(), String>>>,
 }
 
@@ -42,6 +43,11 @@ pub struct Grabacion {
 pub struct EstadoVideo {
     pub grabando: bool,
     pub segundos: f64,
+}
+
+pub enum Paquete {
+    Video(f64, xcap::Frame),
+    Audio(f64, Vec<u8>),
 }
 
 pub fn grabando(app: &AppHandle) -> bool {
@@ -149,10 +155,38 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
             / 2) as i32;
     let calidad_maxima = cfg.calidad == "maxima";
     let detener = Arc::new(AtomicBool::new(false));
+    let inicio = Instant::now();
+    let (tx, rxq) = sync_channel::<Paquete>(64);
+    let mut audio_hilo = None;
+    let con_audio = if cfg.sonido_equipo || cfg.microfono {
+        let arranque = audio::iniciar(
+            audio::Fuentes {
+                equipo: cfg.sonido_equipo,
+                microfono: cfg.microfono,
+            },
+            calidad_maxima,
+            inicio,
+            tx.clone(),
+            detener.clone(),
+        );
+        audio_hilo = arranque.hilo;
+        for aviso in &arranque.avisos {
+            use tauri_plugin_notification::NotificationExt;
+            let _ = app
+                .notification()
+                .builder()
+                .title("Grabación de vídeo")
+                .body(aviso)
+                .show();
+        }
+        arranque.con_audio
+    } else {
+        false
+    };
     let ruta_hilo = ruta.clone();
-    let (tx, rxq) = sync_channel::<(f64, xcap::Frame)>(8);
     let captura_detener = detener.clone();
     let app_hilo = app.clone();
+    let inicio_video = inicio;
     // En Windows el monitor de xcap no se puede mover a otro hilo: se pasa su esquina y se vuelve a buscar allí.
     let (esquina_x, esquina_y) = (mx + 1, my + 1);
     let captura = thread::spawn(move || {
@@ -171,11 +205,10 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
                 return;
             }
         };
-        let inicio = Instant::now();
         let mut ultimo = None;
         while !captura_detener.load(Ordering::Relaxed) {
             if let Ok(frame) = rx_frames.recv_timeout(Duration::from_millis(100)) {
-                let t = inicio.elapsed().as_secs_f64();
+                let t = inicio_video.elapsed().as_secs_f64();
                 if !acepta_pts(ultimo, t, fps) {
                     continue;
                 }
@@ -183,7 +216,7 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
                 match recortar_frame(frame, region_x, region_y, rw, rh) {
                     // El codificador espera siempre el mismo tamaño.
                     Some(f) if f.width == rw && f.height == rh => {
-                        let _ = tx.try_send((t, f));
+                        let _ = tx.try_send(Paquete::Video(t, f));
                     }
                     _ => {
                         let app = app_hilo.clone();
@@ -200,13 +233,24 @@ pub fn iniciar(app: AppHandle, region: Option<Region>) -> Result<(), String> {
         }
         let _ = grabador.stop();
     });
-    let codificacion =
-        thread::spawn(move || codificar_cola(rxq, archivo, ruta_hilo, rw, rh, fps, calidad_maxima));
+    let codificacion = thread::spawn(move || {
+        codificar_cola(
+            rxq,
+            archivo,
+            ruta_hilo,
+            rw,
+            rh,
+            fps,
+            calidad_maxima,
+            con_audio,
+        )
+    });
     *guard = Some(Arc::new(Grabacion {
-        inicio: Instant::now(),
+        inicio,
         ruta: ruta.clone(),
         detener,
         captura: Some(captura),
+        audio: audio_hilo,
         codificacion: Some(codificacion),
     }));
     let _ = (mx, my);
@@ -250,30 +294,64 @@ fn recortar_frame(mut f: xcap::Frame, x: i32, y: i32, w: u32, h: u32) -> Option<
 
 #[allow(clippy::too_many_arguments)]
 fn codificar_cola(
-    rx: Receiver<(f64, xcap::Frame)>,
+    rx: Receiver<Paquete>,
     archivo: std::fs::File,
     ruta: PathBuf,
     w: u32,
     h: u32,
     fps: u32,
     maxima: bool,
+    con_audio: bool,
 ) -> Result<(), String> {
-    let Ok(primero) = rx.recv() else {
-        // Sin fotogramas no hay vídeo: se borra el archivo vacío que se reservó al empezar.
-        drop(archivo);
-        let _ = std::fs::remove_file(&ruta);
-        return Err("No se capturó ningún fotograma".to_string());
+    let mut pendientes = Vec::new();
+    let primero = loop {
+        match rx.recv() {
+            Ok(Paquete::Video(pts, frame)) => break (pts, frame),
+            Ok(Paquete::Audio(pts, datos)) => pendientes.push((pts, datos)),
+            Err(_) => {
+                drop(archivo);
+                let _ = std::fs::remove_file(&ruta);
+                return Err("No se capturó ningún fotograma".to_string());
+            }
+        }
     };
     let cfg = configuracion(w, h, fps, maxima);
     let mut enc =
         Encoder::with_api_config(OpenH264API::from_source(), cfg).map_err(|e| e.to_string())?;
-    let mut mux = muxide::api::MuxerBuilder::new(archivo)
-        .video(muxide::api::VideoCodec::H264, w, h, fps as f64)
-        .build()
-        .map_err(|e| e.to_string())?;
-    escribir_frame(&mut enc, &mut mux, primero.0, &primero.1)?;
-    while let Ok((pts, frame)) = rx.recv() {
-        escribir_frame(&mut enc, &mut mux, pts, &frame)?;
+    let mut builder = muxide::api::MuxerBuilder::new(archivo).video(
+        muxide::api::VideoCodec::H264,
+        w,
+        h,
+        fps as f64,
+    );
+    if con_audio {
+        builder = builder.audio(
+            muxide::api::AudioCodec::Aac(muxide::api::AacProfile::Lc),
+            48000,
+            2,
+        );
+    }
+    let mut mux = builder.build().map_err(|e| e.to_string())?;
+    // El vídeo empieza en su primer fotograma (en Wayland llega cuando se acepta el diálogo del sistema): todo se cuenta desde
+    // ahí y el audio de antes se descarta (muxide no admite audio antes del primer fotograma).
+    let base = primero.0;
+    escribir_frame(&mut enc, &mut mux, 0.0, &primero.1)?;
+    // Un fallo del audio no tira el vídeo: se pierde ese trozo de sonido y se sigue.
+    let audio = |mux: &mut muxide::api::Muxer<std::fs::File>, pts: f64, datos: &[u8]| {
+        if con_audio && pts >= base {
+            if let Err(e) = mux.write_audio(pts - base, datos) {
+                eprintln!("Audio descartado: {e}");
+            }
+        }
+    };
+    for (pts, datos) in pendientes {
+        audio(&mut mux, pts, &datos);
+    }
+    while let Ok(paquete) = rx.recv() {
+        match paquete {
+            Paquete::Video(pts, frame) => escribir_frame(&mut enc, &mut mux, pts - base, &frame)?,
+            Paquete::Audio(pts, datos) => audio(&mut mux, pts, &datos),
+        }
     }
     mux.finish().map_err(|e| e.to_string())
 }
@@ -368,6 +446,9 @@ fn parar_sin_aviso(app: &AppHandle) -> Result<Grabacion, String> {
     let mut g = Arc::try_unwrap(g).map_err(|_| "La grabación sigue en uso".to_string())?;
     g.detener.store(true, Ordering::Relaxed);
     if let Some(h) = g.captura.take() {
+        let _ = h.join();
+    }
+    if let Some(h) = g.audio.take() {
         let _ = h.join();
     }
     let resultado = g
@@ -497,6 +578,110 @@ mod tests {
         codificar_sinteticos(&p).expect("codificación");
         let b = std::fs::read(&p).expect("mp4");
         assert_eq!(&b[4..8], b"ftyp");
+        let _ = std::fs::remove_file(p);
+    }
+
+    /// El camino completo de la grabación: el primer fotograma llega a los 2 s (como tras el diálogo de Wayland), el audio
+    /// desde 0 s. El audio de antes se tira y todo empieza en 0. Con `VITACLIP_MP4` se guarda el archivo para mirarlo.
+    #[test]
+    fn cola_con_audio_empieza_en_el_primer_fotograma() {
+        let p = std::env::var("VITACLIP_MP4")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                std::env::temp_dir().join(format!("vitaclip-cola-{}.mp4", std::process::id()))
+            });
+        let archivo = std::fs::File::create(&p).expect("archivo");
+        let (tx, rx) = sync_channel::<Paquete>(4096);
+        let aac = fdk_aac::enc::Encoder::new(fdk_aac::enc::EncoderParams {
+            bit_rate: fdk_aac::enc::BitRate::Cbr(160_000),
+            sample_rate: 48_000,
+            transport: fdk_aac::enc::Transport::Adts,
+            channels: fdk_aac::enc::ChannelMode::Stereo,
+            audio_object_type: fdk_aac::enc::AudioObjectType::Mpeg4LowComplexity,
+        })
+        .expect("encoder AAC");
+        let mut n = 0u64;
+        for bloque in 0..(4 * 48_000 / 1024) {
+            let muestras: Vec<i16> = (0..1024)
+                .flat_map(|i| {
+                    let t = (bloque * 1024 + i) as f32 / 48_000.;
+                    let x = ((2. * std::f32::consts::PI * 440. * t).sin() * 8000.) as i16;
+                    [x, x]
+                })
+                .collect();
+            let mut salida = vec![0; 4096];
+            let info = aac.encode(&muestras, &mut salida).expect("AAC");
+            if info.output_size > 0 {
+                tx.send(Paquete::Audio(
+                    n as f64 * 1024. / 48_000.,
+                    salida[..info.output_size].to_vec(),
+                ))
+                .unwrap();
+                n += 1;
+            }
+            // Fotogramas a 30 fps desde los 2 s, intercalados como llegarían.
+            let t = (bloque + 1) as f64 * 1024. / 48_000.;
+            let f = (t * 30.).floor() as u64;
+            if t >= 2.0 {
+                tx.send(Paquete::Video(
+                    t,
+                    xcap::Frame::new(64, 48, vec![(f % 255) as u8; 64 * 48 * 4]),
+                ))
+                .unwrap();
+            }
+        }
+        drop(tx);
+        codificar_cola(rx, archivo, p.clone(), 64, 48, 30, false, true).expect("MP4");
+        assert!(std::fs::metadata(&p).expect("MP4").len() > 0);
+        if std::env::var("VITACLIP_MP4").is_err() {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+
+    #[test]
+    fn mp4_sintetico_con_aac() {
+        let p = std::env::temp_dir().join(format!("vitaclip-aac-{}.mp4", std::process::id()));
+        let archivo = std::fs::File::create(&p).expect("archivo");
+        let mut video =
+            Encoder::with_api_config(OpenH264API::from_source(), configuracion(64, 48, 30, false))
+                .expect("encoder de vídeo");
+        let audio = fdk_aac::enc::Encoder::new(fdk_aac::enc::EncoderParams {
+            bit_rate: fdk_aac::enc::BitRate::Cbr(160_000),
+            sample_rate: 48_000,
+            transport: fdk_aac::enc::Transport::Adts,
+            channels: fdk_aac::enc::ChannelMode::Stereo,
+            audio_object_type: fdk_aac::enc::AudioObjectType::Mpeg4LowComplexity,
+        })
+        .expect("encoder AAC");
+        let mut mux = muxide::api::MuxerBuilder::new(archivo)
+            .video(muxide::api::VideoCodec::H264, 64, 48, 30.)
+            .audio(
+                muxide::api::AudioCodec::Aac(muxide::api::AacProfile::Lc),
+                48_000,
+                2,
+            )
+            .build()
+            .expect("muxer");
+        for i in 0..10 {
+            let rgba = vec![(i * 20) as u8; 64 * 48 * 4];
+            let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(&rgba, (64, 48)));
+            let imagen = video.encode(&yuv).expect("vídeo");
+            if !imagen.to_vec().is_empty() {
+                mux.write_video(i as f64 / 30., &imagen.to_vec(), i == 0)
+                    .expect("fotograma");
+            }
+            let muestras: Vec<i16> = (0..2048)
+                .map(|n| ((n as f32 * 0.03).sin() * 12_000.0) as i16)
+                .collect();
+            let mut salida = vec![0; 4096];
+            let datos = audio.encode(&muestras, &mut salida).expect("AAC");
+            if datos.output_size > 0 {
+                mux.write_audio(i as f64 * 1024. / 48_000., &salida[..datos.output_size])
+                    .expect("audio");
+            }
+        }
+        mux.finish().expect("MP4");
+        assert!(std::fs::metadata(&p).expect("MP4").len() > 0);
         let _ = std::fs::remove_file(p);
     }
 }
