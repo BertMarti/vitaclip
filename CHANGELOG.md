@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## [1.1.0] - 2026-11-10
+
+### Añadido
+- **Vídeo con sonido:** las grabaciones llevan el sonido del equipo (lo que suena por los altavoces) y, si se activa, el micrófono, mezclados en una pista AAC. Dos interruptores nuevos en Ajustes → Capturas y vídeo («Grabar el sonido del equipo», activado por defecto, y «Grabar el micrófono», apagado).
+- Si una fuente de sonido no se puede abrir, el vídeo se graba igual sin ella y se avisa con una notificación.
+- En macOS, grabar el sonido del equipo necesita macOS 14.6 o posterior.
+
 ## [1.0.1] - 2026-11-02
 
 ### Cambiado
