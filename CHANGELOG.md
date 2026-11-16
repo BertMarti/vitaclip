@@ -1,5 +1,15 @@
 # Historial de versiones
 
+## [1.1.1] - 2026-11-16
+
+### Añadido
+- **Versión para Microsoft Store:** Vitaclip se publica también en la Store, donde Microsoft firma el paquete y Windows 11 no lo bloquea con el Control inteligente de aplicaciones. En esa versión las actualizaciones llegan por la Store y el inicio con Windows usa la tarea del paquete.
+- Política de privacidad en `docs/PRIVACIDAD.md`.
+
+### Corregido
+- SQLite actualizado a la 3.54.1 (`rusqlite` 0.41) por una vulnerabilidad local publicada hoy (RUSTSEC-2026-0459).
+- Ajustes → Atajos ya no muestra en Windows y macOS las órdenes de Wayland, que solo sirven en Linux.
+
 ## [1.1.0] - 2026-11-10
 
 ### Añadido
