@@ -24,7 +24,7 @@ $version = "$($conf.version).0"
 $carpeta = Join-Path ([IO.Path]::GetTempPath()) ("vitaclip-msix-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path (Join-Path $carpeta 'Assets') | Out-Null
 Copy-Item $Exe (Join-Path $carpeta 'vitaclip.exe')
-foreach ($icono in 'StoreLogo', 'Square44x44Logo', 'Square71x71Logo', 'Square150x150Logo', 'Square310x310Logo') {
+foreach ($icono in 'StoreLogo', 'Square44x44Logo', 'Square150x150Logo') {
   Copy-Item (Join-Path $raiz "src-tauri/icons/$icono.png") (Join-Path $carpeta "Assets/$icono.png")
 }
 

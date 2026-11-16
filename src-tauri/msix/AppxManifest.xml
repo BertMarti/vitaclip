@@ -32,9 +32,7 @@
         Description="El portapapeles supervitaminado"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Square310x310Logo="Assets\Square310x310Logo.png" Square71x71Logo="Assets\Square71x71Logo.png" />
-      </uap:VisualElements>
+        Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <!-- Inicio con Windows: la app la activa la primera vez (arranque.rs, id VitaclipInicio); sin argumentos se queda en la bandeja. -->
         <desktop:Extension Category="windows.startupTask" Executable="vitaclip.exe" EntryPoint="Windows.FullTrustApplication">

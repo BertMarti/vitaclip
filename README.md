@@ -106,6 +106,8 @@ Guía completa: **[docs/USO.md](docs/USO.md)**.
 
 ## Privacidad
 
+Política completa: [docs/PRIVACIDAD.md](docs/PRIVACIDAD.md).
+
 - Todo se guarda **solo en tu equipo**, en una base de datos SQLite. Sin telemetría, sin cuentas y sin anuncios. La única conexión que hace Vitaclip por su cuenta es preguntar una vez al día a GitHub si hay versión nueva (sin enviar datos tuyos) y se puede apagar.
 - **Respeta a los gestores de contraseñas:** lo que copias desde KeePassXC, 1Password, Bitwarden y similares (que lo marcan como secreto) no entra en el historial.
 - Por defecto **no se guardan** números de tarjeta ni claves con pinta de token (`ghp_…`, `sk-…`, `AKIA…`), y puedes añadir tus propios patrones.
