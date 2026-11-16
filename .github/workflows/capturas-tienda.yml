@@ -1,0 +1,34 @@
+name: Capturas para Microsoft Store
+
+# Instala una versión publicada en un Windows y saca las capturas de la ficha de la Store (artefacto capturas-tienda).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión publicada (etiqueta)"
+        required: true
+        default: v1.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  capturas:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Descargar el instalador publicado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.version }}" -R "${{ github.repository }}" -p "*_x64-setup.exe" -D instalador
+      - name: Sacar las capturas
+        shell: pwsh
+        run: |
+          $instalador = (Get-ChildItem instalador\*-setup.exe | Select-Object -First 1).FullName
+          ./.github/scripts/capturas-tienda-windows.ps1 -Instalador $instalador
+      - name: Guardar capturas
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: capturas-tienda
+          path: capturas/
