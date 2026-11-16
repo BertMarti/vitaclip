@@ -140,3 +140,14 @@ Decisiones y medidas del proyecto. Lo más reciente, arriba en cada sección.
 - Probar el audio de verdad sin interfaz: `VITACLIP_AAC=/tmp/x.aac cargo test --lib audio_real -- --ignored` mientras suena
   `pw-play tono.wav`. En Xvfb el selector de zona no se abre, así que la grabación completa no se puede pulsar ahí.
 - Luna entregó sin compilar (faltaba ALSA) y con la API de cpal 0.17: revisar siempre que lo entregado compila.
+
+## Microsoft Store (2026-11-16)
+- **Por qué:** el Control inteligente de aplicaciones de Windows 11 bloquea el .exe sin firma sin opción de saltarlo. SignPath
+  Foundation pide reputación y licencias OSI en todo (FDK AAC no lo es); Azure no firma a particulares de la UE. La Store es
+  gratis y Microsoft firma el paquete.
+- **Cómo:** `src-tauri/msix/AppxManifest.xml` (plantilla) + `.github/scripts/crear-msix.ps1` (makeappx del SDK, versión x.y.z.0,
+  identidad de las variables `MSSTORE_*`). `release.yml` deja el MSIX sin firmar como artefacto `vitaclip-msix`.
+- **App empaquetada** (`paquete::empaquetada()`): sin actualizador propio (Ajustes enlaza a la Store) e inicio con la
+  `StartupTask` `VitaclipInicio` (la clave Run va a un registro privado del paquete y no sirve).
+- **Prueba:** `prueba-msix.yml` (manual) firma con un certificado de usar y tirar, instala y comprueba Ajustes y la tarea
+  (State=2). Verde el 16/11. El manifiesto no admite `Square310x310Logo` sin `Wide310x150Logo`.
