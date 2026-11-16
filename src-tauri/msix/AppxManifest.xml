@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plantilla del paquete MSIX para Microsoft Store. La rellena .github/scripts/crear-msix.ps1 (ver docs/specs/2026-11-16-vitaclip-microsoft-store.md). -->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity Name="{{NOMBRE}}" Publisher="{{EDITOR}}" Version="{{VERSION}}" ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Vitaclip</DisplayName>
+    <PublisherDisplayName>{{EDITOR_VISIBLE}}</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>El portapapeles supervitaminado</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="es-ES" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Vitaclip" Executable="vitaclip.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Vitaclip"
+        Description="El portapapeles supervitaminado"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <!-- Inicio con Windows: la app la activa la primera vez (arranque.rs, id VitaclipInicio); sin argumentos se queda en la bandeja. -->
+        <desktop:Extension Category="windows.startupTask" Executable="vitaclip.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="VitaclipInicio" Enabled="false" DisplayName="Vitaclip" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>

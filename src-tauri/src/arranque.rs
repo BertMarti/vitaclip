@@ -1,4 +1,4 @@
-//! Arranque con el sistema: clave `Run` del registro en Windows, LaunchAgent en macOS y `~/.config/autostart` en Linux.
+//! Arranque con el sistema: tarea WinRT dentro de MSIX, clave `Run` en Windows normal, LaunchAgent en macOS y `~/.config/autostart` en Linux.
 //! La app se lanza con `--oculto`: solo se queda en la bandeja, sin abrir ninguna ventana.
 //!
 //! Viene activado. Después manda lo que diga el sistema: si el usuario lo quita desde el Administrador de tareas de Windows
@@ -10,6 +10,73 @@
 
 use auto_launch::{AutoLaunch, AutoLaunchBuilder};
 use tauri::AppHandle;
+
+#[cfg(windows)]
+const TAREA: &str = "VitaclipInicio";
+
+#[cfg(windows)]
+fn tarea_estado() -> Result<windows::ApplicationModel::StartupTaskState, String> {
+    use windows::core::HSTRING;
+    use windows::ApplicationModel::StartupTask;
+    std::thread::spawn(|| -> Result<_, String> {
+        StartupTask::GetAsync(&HSTRING::from(TAREA))
+            .map_err(|e| format!("No se pudo leer el inicio con Windows: {e}"))?
+            .get()
+            .map_err(|e| format!("No se pudo leer el inicio con Windows: {e}"))?
+            .State()
+            .map_err(|e| format!("No se pudo leer el inicio con Windows: {e}"))
+    })
+    .join()
+    .map_err(|_| {
+        String::from("No se pudo leer el inicio con Windows: el hilo terminó inesperadamente.")
+    })?
+}
+
+#[cfg(windows)]
+fn tarea_activar() -> Result<(), String> {
+    use windows::core::HSTRING;
+    use windows::ApplicationModel::{StartupTask, StartupTaskState};
+    std::thread::spawn(|| -> Result<(), String> {
+        let tarea = StartupTask::GetAsync(&HSTRING::from(TAREA))
+            .map_err(|e| format!("No se pudo activar el inicio con Windows: {e}"))?
+            .get()
+            .map_err(|e| format!("No se pudo activar el inicio con Windows: {e}"))?;
+        match tarea
+            .RequestEnableAsync()
+            .map_err(|e| format!("No se pudo activar el inicio con Windows: {e}"))?
+            .get()
+            .map_err(|e| format!("No se pudo activar el inicio con Windows: {e}"))?
+        {
+            StartupTaskState::DisabledByUser => Err("Windows tiene desactivado el inicio de Vitaclip: actívalo en Configuración → Aplicaciones → Inicio.".into()),
+            StartupTaskState::DisabledByPolicy => Err("Una directiva del equipo impide que Vitaclip se inicie con Windows.".into()),
+            StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy => Ok(()),
+            _ => Err("No se pudo activar el inicio con Windows: Windows no ha activado la tarea.".into()),
+        }
+    })
+    .join()
+    .map_err(|_| String::from("No se pudo activar el inicio con Windows: el hilo terminó inesperadamente."))?
+}
+
+#[cfg(windows)]
+fn tarea_desactivar() -> Result<(), String> {
+    use windows::core::HSTRING;
+    use windows::ApplicationModel::StartupTask;
+    std::thread::spawn(|| -> Result<(), String> {
+        let tarea = StartupTask::GetAsync(&HSTRING::from(TAREA))
+            .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))?
+            .get()
+            .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))?;
+        tarea
+            .Disable()
+            .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))
+    })
+    .join()
+    .map_err(|_| {
+        String::from(
+            "No se pudo desactivar el inicio con Windows: el hilo terminó inesperadamente.",
+        )
+    })?
+}
 
 fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
     let exe = std::env::current_exe().map_err(|x| x.to_string())?;
@@ -33,6 +100,14 @@ fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
 }
 
 pub fn aplicar(app: &AppHandle, activar: bool) -> Result<(), String> {
+    if crate::paquete::empaquetada() {
+        #[cfg(windows)]
+        return if activar {
+            tarea_activar()
+        } else {
+            tarea_desactivar()
+        };
+    }
     let g = gestor(app)?;
     if activar {
         g.enable()
@@ -51,6 +126,21 @@ pub fn sincronizar(app: &AppHandle, primera_vez: bool) -> Option<bool> {
     // En desarrollo no se registra el binario de `target/debug`.
     if cfg!(debug_assertions) {
         return None;
+    }
+    if crate::paquete::empaquetada() {
+        #[cfg(windows)]
+        {
+            if primera_vez {
+                return Some(tarea_activar().is_ok());
+            }
+            return tarea_estado().ok().map(|estado| {
+                use windows::ApplicationModel::StartupTaskState;
+                matches!(
+                    estado,
+                    StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
+                )
+            });
+        }
     }
     let activo = primera_vez || gestor(app).ok()?.is_enabled().ok()?;
     if activo {

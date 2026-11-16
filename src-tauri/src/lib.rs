@@ -10,6 +10,7 @@ mod estado;
 mod ia;
 mod llavero;
 mod pegar;
+mod paquete;
 mod qr;
 mod sensible;
 mod teclado;
