@@ -17,6 +17,13 @@ gh attestation verify Vitaclip_x.y.z_x64-setup.exe -R BertMarti/vitaclip
    El instalador es **para tu usuario**: no pide permisos de administrador.
 3. Al finalizar, Vitaclip aparecerá en la bandeja del sistema (junto al reloj).
 
+### «Control inteligente de aplicaciones ha bloqueado…»
+En Windows 11 con el **Control inteligente de aplicaciones** (Smart App Control) activado, Windows bloquea los programas sin firma
+que aún no conoce, sin botón de «Ejecutar de todas formas». Puede pasar al instalar o tras una actualización (cada versión es un
+archivo nuevo). Mientras Vitaclip no esté firmado ([por qué](FIRMA.md)), la única forma de abrirlo es desactivarlo:
+**Seguridad de Windows → Control de aplicaciones y navegador → Configuración de Control inteligente de aplicaciones → Desactivado**.
+Desde la actualización de Windows 11 de abril de 2026 se puede volver a activar en el mismo sitio sin reinstalar Windows.
+
 ## macOS
 1. Descarga el archivo según tu procesador: **aarch64** (Apple Silicon M1, M2...) o **x64** (Intel).
 2. Abre el `.dmg` y arrastra **Vitaclip** a la carpeta **Aplicaciones**.

@@ -12,6 +12,10 @@ Para que desaparezca hacen falta dos cosas:
 2. **Reputación**: con la firma, SmartScreen deja de avisar a medida que se descarga y se instala sin problemas. Con un certificado
    nuevo puede tardar unos días o semanas en desaparecer del todo.
 
+El **Control inteligente de aplicaciones** de Windows 11 es más estricto que SmartScreen: bloquea sin opción de saltarlo cualquier
+programa sin firma que Microsoft no conozca todavía, y cada versión nueva vuelve a ser desconocida. Con una firma válida lo deja
+pasar. Por eso, para Vitaclip, la firma es imprescindible.
+
 Un certificado autofirmado **no sirve**: Windows lo trata igual que un programa sin firmar.
 
 ## Opción recomendada (gratis): SignPath Foundation
