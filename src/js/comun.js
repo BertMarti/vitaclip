@@ -9,6 +9,7 @@ import { atajoLegible } from './atajos.js';
 const DURACION_AVISO = 2600;
 
 export const esMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? '');
+export const esLinux = /Linux/.test(globalThis.navigator?.platform ?? '');
 
 // Tecla Ctrl o ⌘ según el sistema, para los textos de ayuda.
 export const teclaMod = esMac ? '⌘' : 'Ctrl+';

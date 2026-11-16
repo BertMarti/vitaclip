@@ -5,7 +5,7 @@
 import { el, poner } from './dom.js';
 import { t, idiomaActual } from './i18n.js';
 import { icono } from './iconos.js';
-import { esMac, boton, legible } from './comun.js';
+import { esMac, esLinux, boton, legible } from './comun.js';
 import { ATAJOS_DEFECTO, ACCIONES_ATAJO, atajoDeEvento, partesLegibles, quienUsa, normalizarAtajo } from './atajos.js';
 import { datos, pagina, guardar, cabeceraSeccion, filaAjuste, grupoAjustes, lineaCodigo } from './ajustes-comun.js';
 
@@ -130,6 +130,7 @@ export function seccionAtajos() {
     bienvenida && avisoBienvenida(),
     grupoAjustes(...ACCIONES_ATAJO.map(filaAtajo)),
     el('p', { class: 'suave nota', text: t('atajos.nota') }),
-    ordenesSistema(),
+    // Las órdenes para crear atajos del sistema solo hacen falta en Linux (Wayland).
+    esLinux && ordenesSistema(),
   ];
 }
