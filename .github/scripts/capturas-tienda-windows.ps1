@@ -13,6 +13,10 @@ try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop; S
 
 function Foto($nombre, $rect = $null) {
   if (-not $rect) { $rect = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds }
+  # El rectángulo de una ventana de Windows 11 incluye un borde invisible de 7 px a los lados y abajo.
+  elseif ($rect.Width -lt [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width) {
+    $rect = New-Object System.Windows.Rect ($rect.X + 7), $rect.Y, ($rect.Width - 14), ($rect.Height - 7)
+  }
   $bmp = New-Object System.Drawing.Bitmap ([int]$rect.Width), ([int]$rect.Height)
   [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen([int]$rect.X, [int]$rect.Y, 0, 0, $bmp.Size)
   $bmp.Save("capturas\$nombre.png")
@@ -35,10 +39,14 @@ function Ventana($titulo, $segundos = 30) {
   }
   throw "No aparece la ventana «$titulo»"
 }
-function Pulsar($ventana, $nombre) {
-  $condicion = New-Object System.Windows.Automation.PropertyCondition ([System.Windows.Automation.AutomationElement]::NameProperty), $nombre
-  $x = $ventana.FindFirst($arbol::Descendants, $condicion)
-  if (-not $x) { throw "No aparece «$nombre»" }
+# Pulsa el primer elemento pulsable cuyo nombre contenga el texto (el nombre accesible puede llevar más cosas, como el icono).
+function Pulsar($ventana, $texto) {
+  $pulsable = New-Object System.Windows.Automation.PropertyCondition ([System.Windows.Automation.AutomationElement]::IsInvokePatternAvailableProperty), $true
+  $x = $ventana.FindAll($arbol::Descendants, $pulsable) | Where-Object { $_.Current.Name -like "*$texto*" } | Select-Object -First 1
+  if (-not $x) {
+    Write-Host "Pulsables: $(($ventana.FindAll($arbol::Descendants, $pulsable) | ForEach-Object { $_.Current.Name }) -join ' | ')"
+    throw "No aparece «$texto»"
+  }
   $x.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
 
@@ -48,10 +56,12 @@ $exe = (Get-ChildItem "$env:LOCALAPPDATA\Vitaclip\*.exe" | Where-Object Name -no
 Start-Process $exe
 $ajustes = Ventana "*Ajustes*" 60
 Start-Sleep -Seconds 4
-Foto "ajustes-general" $ajustes.Current.BoundingRectangle
-Pulsar $ajustes "Capturas y vídeo"
-Start-Sleep -Seconds 2
-Foto "ajustes-capturas" $ajustes.Current.BoundingRectangle
+Foto "ajustes-atajos" $ajustes.Current.BoundingRectangle
+try {
+  Pulsar $ajustes "Capturas"
+  Start-Sleep -Seconds 2
+  Foto "ajustes-capturas" $ajustes.Current.BoundingRectangle
+} catch { Write-Host "Sin captura de Ajustes → Capturas: $_" }
 $ajustes.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
 Start-Sleep -Seconds 2
 
