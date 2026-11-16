@@ -16,9 +16,9 @@ const TAREA: &str = "VitaclipInicio";
 
 #[cfg(windows)]
 fn tarea_estado() -> Result<windows::ApplicationModel::StartupTaskState, String> {
-    use windows::ApplicationModel::StartupTask;
     use windows::core::HSTRING;
-    std::thread::spawn(|| {
+    use windows::ApplicationModel::StartupTask;
+    std::thread::spawn(|| -> Result<_, String> {
         StartupTask::GetAsync(&HSTRING::from(TAREA))
             .map_err(|e| format!("No se pudo leer el inicio con Windows: {e}"))?
             .get()
@@ -27,14 +27,16 @@ fn tarea_estado() -> Result<windows::ApplicationModel::StartupTaskState, String>
             .map_err(|e| format!("No se pudo leer el inicio con Windows: {e}"))
     })
     .join()
-    .map_err(|_| "No se pudo leer el inicio con Windows: el hilo terminó inesperadamente.".into())?
+    .map_err(|_| {
+        String::from("No se pudo leer el inicio con Windows: el hilo terminó inesperadamente.")
+    })?
 }
 
 #[cfg(windows)]
 fn tarea_activar() -> Result<(), String> {
-    use windows::ApplicationModel::{StartupTask, StartupTaskState};
     use windows::core::HSTRING;
-    std::thread::spawn(|| {
+    use windows::ApplicationModel::{StartupTask, StartupTaskState};
+    std::thread::spawn(|| -> Result<(), String> {
         let tarea = StartupTask::GetAsync(&HSTRING::from(TAREA))
             .map_err(|e| format!("No se pudo activar el inicio con Windows: {e}"))?
             .get()
@@ -52,23 +54,28 @@ fn tarea_activar() -> Result<(), String> {
         }
     })
     .join()
-    .map_err(|_| "No se pudo activar el inicio con Windows: el hilo terminó inesperadamente.".into())?
+    .map_err(|_| String::from("No se pudo activar el inicio con Windows: el hilo terminó inesperadamente."))?
 }
 
 #[cfg(windows)]
 fn tarea_desactivar() -> Result<(), String> {
-    use windows::ApplicationModel::StartupTask;
     use windows::core::HSTRING;
-    std::thread::spawn(|| {
+    use windows::ApplicationModel::StartupTask;
+    std::thread::spawn(|| -> Result<(), String> {
         let tarea = StartupTask::GetAsync(&HSTRING::from(TAREA))
             .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))?
             .get()
             .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))?;
-        tarea.Disable()
+        tarea
+            .Disable()
             .map_err(|e| format!("No se pudo desactivar el inicio con Windows: {e}"))
     })
     .join()
-    .map_err(|_| "No se pudo desactivar el inicio con Windows: el hilo terminó inesperadamente.".into())?
+    .map_err(|_| {
+        String::from(
+            "No se pudo desactivar el inicio con Windows: el hilo terminó inesperadamente.",
+        )
+    })?
 }
 
 fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
@@ -95,7 +102,11 @@ fn gestor(app: &AppHandle) -> Result<AutoLaunch, String> {
 pub fn aplicar(app: &AppHandle, activar: bool) -> Result<(), String> {
     if crate::paquete::empaquetada() {
         #[cfg(windows)]
-        return if activar { tarea_activar() } else { tarea_desactivar() };
+        return if activar {
+            tarea_activar()
+        } else {
+            tarea_desactivar()
+        };
     }
     let g = gestor(app)?;
     if activar {
@@ -124,7 +135,10 @@ pub fn sincronizar(app: &AppHandle, primera_vez: bool) -> Option<bool> {
             }
             return tarea_estado().ok().map(|estado| {
                 use windows::ApplicationModel::StartupTaskState;
-                matches!(estado, StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy)
+                matches!(
+                    estado,
+                    StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
+                )
             });
         }
     }
