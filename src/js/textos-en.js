@@ -279,6 +279,8 @@ export const en = {
   'actualizaciones.descargar': 'Download',
   'actualizaciones.descargando': 'Downloading update',
   'actualizaciones.descargandoPorcentaje': 'Downloading… {n}%',
+  'actualizaciones.tienda': 'Updates come through the Microsoft Store.',
+  'actualizaciones.abrirTienda': 'Open Microsoft Store',
   'ventana.raton': 'Next to the mouse',
   'ventana.recordar': 'Remember position',
   'idioma.es': 'Español',

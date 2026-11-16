@@ -69,6 +69,21 @@ jobs:
           # latest.json lo genera el job `sumas` al final: si lo sube cada compilación, se pisan entre ellas.
           includeUpdaterJson: false
 
+      # --- Paquete de Microsoft Store (sin firmar: lo firma la Store al publicarlo; ver docs/specs/2026-11-16-vitaclip-microsoft-store.md) ---
+      - name: Crear el MSIX de Microsoft Store
+        if: matrix.plataforma == 'windows-latest'
+        shell: pwsh
+        env:
+          MSSTORE_NOMBRE: ${{ vars.MSSTORE_NOMBRE }}
+          MSSTORE_EDITOR: ${{ vars.MSSTORE_EDITOR }}
+          MSSTORE_EDITOR_VISIBLE: ${{ vars.MSSTORE_EDITOR_VISIBLE }}
+        run: ./.github/scripts/crear-msix.ps1 -Exe src-tauri/target/release/vitaclip.exe -Salida "$PWD/Vitaclip_${{ github.ref_name }}_x64.msix"
+      - if: matrix.plataforma == 'windows-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vitaclip-msix
+          path: Vitaclip_*_x64.msix
+
       # --- Firma de Windows con SignPath (solo si el repositorio tiene sus credenciales; ver docs/FIRMA.md) ---
       - name: Reunir los instaladores de Windows para firmar
         if: matrix.plataforma == 'windows-latest' && vars.SIGNPATH_ORGANIZATION_ID != ''

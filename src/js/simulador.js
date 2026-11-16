@@ -287,7 +287,7 @@ const comandos = {
   pausa_cambiar: ({ pausado }) => {
     ajustes.pausado = pausado;
   },
-  actualizacion_estado: () => ({ actual: '1.0.0', disponible: { version: '1.0.1', notas: 'Mejoras y correcciones', fecha: new Date().toISOString() }, comprobado: Date.now(), instalable: true, buscando: false }),
+  actualizacion_estado: () => ({ actual: '1.0.0', disponible: { version: '1.0.1', notas: 'Mejoras y correcciones', fecha: new Date().toISOString() }, comprobado: Date.now(), instalable: true, buscando: false, tienda: false }),
   actualizacion_buscar: async () => {
     await esperar(500);
     emitir('actualizacion-disponible', { version: '1.0.1', notas: 'Mejoras y correcciones', fecha: new Date().toISOString() });

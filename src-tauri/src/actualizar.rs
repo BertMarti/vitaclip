@@ -1,5 +1,6 @@
 //! Actualizaciones firmadas desde GitHub (tauri-plugin-updater, solo desde Rust), comprobadas en segundo plano una vez al día
 //! y bajo demanda desde Ajustes. Solo se instala una descarga con firma válida de la clave del actualizador.
+//! En el paquete de Microsoft Store (MSIX) no se hace nada de esto: las actualizaciones las gestiona la Store.
 
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -49,6 +50,7 @@ pub struct EstadoActualizacion {
     pub comprobado: Option<i64>,
     pub instalable: bool,
     pub buscando: bool,
+    pub tienda: bool,
 }
 
 pub fn instalable() -> bool {
@@ -80,6 +82,7 @@ fn estado(app: &AppHandle) -> EstadoActualizacion {
         comprobado: e.comprobado.lock().ok().and_then(|x| *x),
         instalable: instalable(),
         buscando: e.buscando.lock().map(|x| *x).unwrap_or(false),
+        tienda: crate::paquete::empaquetada(),
     }
 }
 
@@ -110,6 +113,9 @@ fn guardar_sin_disponible(app: &AppHandle, comprobada: bool) {
 }
 
 fn añadir_menu(app: &AppHandle, version: &str) {
+    if crate::paquete::empaquetada() {
+        return;
+    }
     let Some(e) = app.try_state::<Estado>() else {
         return;
     };
@@ -130,6 +136,9 @@ fn añadir_menu(app: &AppHandle, version: &str) {
 }
 
 async fn buscar(app: AppHandle) {
+    if crate::paquete::empaquetada() {
+        return;
+    }
     if let Some(e) = app.try_state::<Estado>() {
         if let Ok(mut x) = e.buscando.lock() {
             *x = true;
@@ -210,7 +219,7 @@ async fn buscar(app: AppHandle) {
 }
 
 pub fn iniciar(app: AppHandle) {
-    if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) || crate::paquete::empaquetada() {
         return;
     }
     std::thread::spawn(move || {
@@ -248,12 +257,17 @@ pub fn actualizacion_estado(app: AppHandle) -> EstadoActualizacion {
 
 #[tauri::command]
 pub async fn actualizacion_buscar(app: AppHandle) -> EstadoActualizacion {
-    buscar(app.clone()).await;
+    if !crate::paquete::empaquetada() {
+        buscar(app.clone()).await;
+    }
     estado(&app)
 }
 
 #[tauri::command]
 pub async fn actualizacion_instalar(app: AppHandle) -> Result<(), String> {
+    if crate::paquete::empaquetada() {
+        return Err("En la versión de Microsoft Store las actualizaciones llegan por la Store.".into());
+    }
     if !instalable() {
         return Err(
             "Esta instalación no se puede actualizar sola: descarga la versión nueva.".into(),
@@ -311,7 +325,11 @@ pub async fn actualizacion_instalar(app: AppHandle) -> Result<(), String> {
 pub fn actualizacion_pagina(app: AppHandle) -> Result<(), String> {
     app.opener()
         .open_url(
-            "https://github.com/BertMarti/vitaclip/releases/latest",
+            if crate::paquete::empaquetada() {
+                "ms-windows-store://downloadsandupdates"
+            } else {
+                "https://github.com/BertMarti/vitaclip/releases/latest"
+            },
             None::<&str>,
         )
         .map_err(|e| e.to_string())

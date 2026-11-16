@@ -6402,6 +6402,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-runtime",
  "tokio",
+ "windows 0.61.3",
  "windows-sys 0.59.0",
  "wl-clipboard-rs",
  "x11rb",

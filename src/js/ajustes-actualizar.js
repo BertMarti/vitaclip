@@ -6,7 +6,7 @@ import { t } from './i18n.js';
 import { boton, intentar, mensajeError } from './comun.js';
 import { datos, guardar, filaAjuste, grupoAjustes, interruptor, pagina } from './ajustes-comun.js';
 
-let estado = { actual: '', disponible: null, comprobado: null, instalable: true, buscando: false };
+let estado = { actual: '', disponible: null, comprobado: null, instalable: true, buscando: false, tienda: false };
 let progreso = null;
 let error = null;
 
@@ -36,6 +36,7 @@ async function instalar() {
 }
 
 export function avisoActualizacion() {
+  if (estado.tienda) return null;
   const disponible = estado.disponible;
   if (!disponible && !error) return null;
   const porcentaje = progreso?.total ? Math.round(progreso.descargado * 100 / progreso.total) : 0;
@@ -56,6 +57,11 @@ export function avisoActualizacion() {
 }
 
 export function seccionActualizaciones() {
+  if (estado.tienda) {
+    return grupoAjustes(
+      filaAjuste('actualizaciones.tienda', null, boton(t('actualizaciones.abrirTienda'), () => intentar(() => api.actualizacionPagina()), { clase: 'boton-primario' })),
+    );
+  }
   const a = datos.ajustes;
   const control = boton(estado.buscando ? t('actualizaciones.buscando') : t('actualizaciones.buscar'), buscar, { clase: 'boton-pequeno' });
   control.disabled = estado.buscando;
